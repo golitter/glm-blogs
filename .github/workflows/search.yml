@@ -6,13 +6,13 @@ on:
     paths:
       - '**.md'
       - '.github/workflows/search.yml'
-      - 'index.html'  # 修改这里
+      - '.github/workflows/index.html'  # 修正路径
   pull_request:
     branches: [ main, master ]
     paths:
       - '**.md'
       - '.github/workflows/search.yml'
-      - 'index.html'  # 修改这里
+      - '.github/workflows/index.html'  # 修正路径
   workflow_dispatch:
   schedule:
     # 每天北京时间上午9点（UTC时间1点）自动更新一次
@@ -100,8 +100,7 @@ jobs:
           done
           
           # 如果git log方法没有获取到足够的文件，使用备用方法
-          RECENT_FILES_COUNT=$(grep -c "recent-file-item" <<< "$(cat $GITHUB_OUTPUT | sed -n '/recent_files_html<<EOF/,/EOF/p' | grep -v 'recent_files_html<<EOF' | grep -v 'EOF')" || echo "0")
-          if [[ $RECENT_FILES_COUNT -lt 3 ]]; then
+          if [[ $(grep -c "recent-file-item" <<< "${{ steps.stats.outputs.recent_files_html }}" || echo "0") -lt 3 ]]; then
             echo "Using fallback method..."
             echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
             
@@ -139,8 +138,8 @@ jobs:
           UPDATE_TIME=$(TZ='Asia/Shanghai' date "+%Y-%m-%d %H:%M:%S")
           
           # 检查模板文件是否存在
-          if [[ ! -f "index.html" ]]; then
-            echo "Error: index.html template file not found!"
+          if [[ ! -f ".github/workflows/index.html" ]]; then
+            echo "Error: .github/workflows/index.html template file not found!"
             exit 1
           fi
           
@@ -150,7 +149,7 @@ jobs:
           export UPDATE_TIME="$UPDATE_TIME"
           
           # 从模板文件生成最终HTML
-          envsubst < index.html > dist/index.html
+          envsubst < .github/workflows/index.html > dist/index.html
           
           echo "Page built successfully with $MD_COUNT markdown files"
         
