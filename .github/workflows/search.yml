@@ -97,33 +97,6 @@ jobs:
             fi
           done
           
-          # 如果git log方法没有获取到足够的文件，使用备用方法
-          if [[ $(grep -c "recent-file-item" <<< "${{ steps.stats.outputs.recent_files_html }}" || echo "0") -lt 3 ]]; then
-            echo "Using fallback method..."
-            echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
-            
-            # 备用方法：按文件名排序
-            find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" -exec stat -c "%Y %n" {} \; | \
-            sort -k1 -nr | head -5 | while read timestamp filepath; do
-              
-              # 转换时间戳为中国时间格式
-              DATE=$(TZ='Asia/Shanghai' date -d "@$timestamp" "+%Y-%m-%d %H:%M")
-              # 获取相对路径（去掉开头的./）
-              REL_PATH=${filepath#./}
-              # 获取文件名
-              FILENAME=$(basename "$filepath")
-              # 构建GitHub URL - 使用master分支
-              GITHUB_URL="https://github.com/golitter/glm-blogs/blob/master/$REL_PATH"
-              
-              # 生成HTML
-              echo "<div class=\"recent-file-item\">" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-name\" onclick=\"window.open('$GITHUB_URL', '_blank')\">$FILENAME</div>" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-path\">$REL_PATH</div>" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-date\">$DATE</div>" >> $GITHUB_OUTPUT
-              echo "</div>" >> $GITHUB_OUTPUT
-            done
-          fi
-          
           echo "EOF" >> $GITHUB_OUTPUT
           
           echo "Markdown files: $MD_COUNT"
