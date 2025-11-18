@@ -143,16 +143,19 @@ jobs:
             exit 1
           fi
           
-          # 使用envsubst替换模板中的变量
-          export MD_COUNT="${{ steps.stats.outputs.md_count }}"
-          export RECENT_FILES_HTML="${{ steps.stats.outputs.recent_files_html }}"
-          export UPDATE_TIME="$UPDATE_TIME"
+          # 创建临时文件来存储变量值
+          cat > /tmp/env_vars << 'EOF'
+          MD_COUNT=${{ steps.stats.outputs.md_count }}
+          RECENT_FILES_HTML=${{ steps.stats.outputs.recent_files_html }}
+          UPDATE_TIME=$UPDATE_TIME
+          EOF
           
-          # 从模板文件生成最终HTML
+          # 使用临时文件进行变量替换
+          source /tmp/env_vars
           envsubst < .github/workflows/index.html > dist/index.html
           
           echo "Page built successfully with $MD_COUNT markdown files"
-        
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
