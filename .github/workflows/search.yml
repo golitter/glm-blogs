@@ -29,7 +29,7 @@ jobs:
       - name: Build search page
         run: |
           mkdir -p dist
-          cat > dist/search.html << 'EOF'
+          cat > dist/index.html << 'HTML_EOF'
           <!DOCTYPE html>
           <html lang="zh-CN">
           <head>
@@ -37,12 +37,7 @@ jobs:
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
               <title>GLM Blogs 搜索</title>
               <style>
-                  * {
-                      margin: 0;
-                      padding: 0;
-                      box-sizing: border-box;
-                  }
-                  
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
                   body {
                       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -52,35 +47,30 @@ jobs:
                       justify-content: center;
                       padding: 20px;
                   }
-                  
                   .container {
                       background: white;
                       padding: 40px;
                       border-radius: 20px;
                       box-shadow: 0 20px 40px rgba(0,0,0,0.1);
                       width: 100%;
-                      max-width: 600px;
+                      max-width: 700px;
                       text-align: center;
                   }
-                  
                   h1 {
                       color: #333;
                       margin-bottom: 10px;
                       font-size: 2.5em;
                       font-weight: 700;
                   }
-                  
                   .subtitle {
                       color: #666;
-                      margin-bottom: 40px;
+                      margin-bottom: 30px;
                       font-size: 1.1em;
                   }
-                  
                   .search-container {
                       position: relative;
                       margin-bottom: 30px;
                   }
-                  
                   .search-box {
                       width: 100%;
                       padding: 18px 60px 18px 25px;
@@ -91,13 +81,11 @@ jobs:
                       transition: all 0.3s ease;
                       background: #f8f9fa;
                   }
-                  
                   .search-box:focus {
                       border-color: #667eea;
                       background: white;
                       box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
                   }
-                  
                   .search-btn {
                       position: absolute;
                       right: 8px;
@@ -114,28 +102,44 @@ jobs:
                       justify-content: center;
                       transition: all 0.3s ease;
                   }
-                  
                   .search-btn:hover {
                       transform: translateY(-50%) scale(1.1);
                   }
-                  
                   .search-btn svg {
                       width: 20px;
                       height: 20px;
                       fill: white;
                   }
-                  
+                  .search-options {
+                      display: flex;
+                      gap: 10px;
+                      margin-bottom: 20px;
+                      justify-content: center;
+                  }
+                  .search-option {
+                      padding: 8px 16px;
+                      border: 2px solid #e1e8ed;
+                      border-radius: 20px;
+                      background: white;
+                      cursor: pointer;
+                      transition: all 0.2s ease;
+                      font-size: 14px;
+                  }
+                  .search-option.active {
+                      background: #667eea;
+                      color: white;
+                      border-color: #667eea;
+                  }
                   .results {
                       text-align: left;
-                      max-height: 400px;
+                      max-height: 500px;
                       overflow-y: auto;
                       display: none;
+                      margin-bottom: 20px;
                   }
-                  
                   .results.show {
                       display: block;
                   }
-                  
                   .result-item {
                       padding: 15px 20px;
                       border: 1px solid #e1e8ed;
@@ -145,65 +149,70 @@ jobs:
                       transition: all 0.2s ease;
                       background: #f8f9fa;
                   }
-                  
                   .result-item:hover {
                       background: #e8f0fe;
                       transform: translateX(5px);
                       border-color: #667eea;
                   }
-                  
                   .result-name {
                       font-weight: 600;
                       color: #333;
                       margin-bottom: 5px;
                       font-size: 16px;
                   }
-                  
                   .result-path {
                       color: #666;
                       font-size: 14px;
                       font-family: 'Monaco', 'Courier New', monospace;
+                      margin-bottom: 8px;
                   }
-                  
+                  .result-snippet {
+                      color: #555;
+                      font-size: 13px;
+                      background: white;
+                      padding: 8px;
+                      border-radius: 6px;
+                      border-left: 3px solid #667eea;
+                      margin-top: 8px;
+                  }
+                  .highlight {
+                      background: #fff3cd;
+                      padding: 2px 4px;
+                      border-radius: 3px;
+                  }
                   .no-results {
                       text-align: center;
                       color: #666;
                       padding: 40px;
                       font-style: italic;
                   }
-                  
                   .loading {
                       text-align: center;
                       color: #666;
                       padding: 20px;
                   }
-                  
                   .stats {
                       color: #666;
                       font-size: 14px;
                       margin-bottom: 15px;
                       text-align: center;
                   }
-                  
                   .quick-links {
                       margin-top: 30px;
                       padding-top: 30px;
                       border-top: 1px solid #e1e8ed;
                   }
-                  
                   .quick-links h3 {
                       color: #333;
                       margin-bottom: 15px;
                       font-size: 1.2em;
                   }
-                  
                   .link-buttons {
                       display: flex;
                       gap: 10px;
                       flex-wrap: wrap;
                       justify-content: center;
                   }
-                  
                   .link-btn {
                       padding: 8px 16px;
                       background: #f0f2f5;
@@ -214,11 +223,15 @@ jobs:
                       font-size: 14px;
                       transition: all 0.2s ease;
                   }
-                  
                   .link-btn:hover {
                       background: #667eea;
                       color: white;
                       border-color: #667eea;
+                  }
+                  .content-match {
+                      color: #28a745;
+                      font-size: 12px;
+                      margin-left: 8px;
                   }
               </style>
           </head>
@@ -226,6 +239,18 @@ jobs:
               <div class="container">
                   <h1>📚 GLM Blogs</h1>
                   <p class="subtitle">搜索你的技术博客文件</p>
+                  
+                  <div class="search-options">
+                      <div class="search-option active" data-mode="filename" onclick="setSearchMode('filename')">
+                          📄 文件名搜索
+                      </div>
+                      <div class="search-option" data-mode="content" onclick="setSearchMode('content')">
+                          🔍 内容搜索
+                      </div>
+                      <div class="search-option" data-mode="both" onclick="setSearchMode('both')">
+                          🎯 综合搜索
+                      </div>
+                  </div>
                   
                   <div class="search-container">
                       <input 
@@ -248,21 +273,41 @@ jobs:
                   <div class="quick-links">
                       <h3>快速访问</h3>
                       <div class="link-buttons">
-                          <a href="https://github.com/golitter/glm-blogs/tree/main/llm" class="link-btn">LLM</a>
-                          <a href="https://github.com/golitter/glm-blogs/tree/main/ml" class="link-btn">机器学习</a>
-                          <a href="https://github.com/golitter/glm-blogs/tree/main/linux" class="link-btn">Linux</a>
-                          <a href="https://github.com/golitter/glm-blogs/tree/main/others" class="link-btn">其他</a>
+                          <a href="https://github.com/golitter/glm-blogs/tree/main/llm" class="link-btn" target="_blank">🤖 LLM</a>
+                          <a href="https://github.com/golitter/glm-blogs/tree/main/ml" class="link-btn" target="_blank">🧠 机器学习</a>
+                          <a href="https://github.com/golitter/glm-blogs/tree/main/linux" class="link-btn" target="_blank">🐧 Linux</a>
+                          <a href="https://github.com/golitter/glm-blogs/tree/main/others" class="link-btn" target="_blank">📦 其他</a>
                       </div>
                   </div>
               </div>
 
               <script>
                   let allFiles = [];
+                  let fileContents = new Map();
                   let isSearching = false;
+                  let searchMode = 'filename';
                   
                   const searchInput = document.getElementById('searchInput');
                   const results = document.getElementById('results');
                   const stats = document.getElementById('stats');
+                  
+                  // 设置搜索模式
+                  function setSearchMode(mode) {
+                      searchMode = mode;
+                      document.querySelectorAll('.search-option').forEach(opt => {
+                          opt.classList.remove('active');
+                      });
+                      document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+                      
+                      // 更新占位符
+                      if (mode === 'filename') {
+                          searchInput.placeholder = '输入文件名搜索...';
+                      } else if (mode === 'content') {
+                          searchInput.placeholder = '输入文件内容关键词搜索...';
+                      } else {
+                          searchInput.placeholder = '输入文件名或内容关键词搜索...';
+                      }
+                  }
                   
                   // 加载所有文件
                   async function loadAllFiles() {
@@ -274,15 +319,58 @@ jobs:
                               .map(item => ({
                                   path: item.path,
                                   name: item.path.split('/').pop(),
-                                  url: `https://github.com/golitter/glm-blogs/blob/main/${item.path}`
+                                  url: `https://github.com/golitter/glm-blogs/blob/main/${item.path}`,
+                                  rawUrl: `https://raw.githubusercontent.com/golitter/glm-blogs/main/${item.path}`
                               }));
                       } catch (error) {
                           console.error('Error loading files:', error);
                       }
                   }
                   
+                  // 获取文件内容
+                  async function getFileContent(file) {
+                      if (fileContents.has(file.path)) {
+                          return fileContents.get(file.path);
+                      }
+                      
+                      try {
+                          const response = await fetch(file.rawUrl);
+                          const content = await response.text();
+                          fileContents.set(file.path, content);
+                          return content;
+                      } catch (error) {
+                          console.error('Error loading file content:', error);
+                          return '';
+                      }
+                  }
+                  
+                  // 高亮搜索词
+                  function highlightText(text, query) {
+                      if (!query) return text;
+                      const regex = new RegExp(`(${query})`, 'gi');
+                      return text.replace(regex, '<span class="highlight">$1</span>');
+                  }
+                  
+                  // 获取内容片段
+                  function getContentSnippet(content, query, maxLength = 150) {
+                      const lowerContent = content.toLowerCase();
+                      const lowerQuery = query.toLowerCase();
+                      const index = lowerContent.indexOf(lowerQuery);
+                      
+                      if (index === -1) return '';
+                      
+                      const start = Math.max(0, index - 50);
+                      const end = Math.min(content.length, index + query.length + 100);
+                      let snippet = content.substring(start, end);
+                      
+                      if (start > 0) snippet = '...' + snippet;
+                      if (end < content.length) snippet = snippet + '...';
+                      
+                      return snippet;
+                  }
+                  
                   // 执行搜索
-                  function performSearch() {
+                  async function performSearch() {
                       const query = searchInput.value.trim();
                       
                       if (!query) {
@@ -294,34 +382,85 @@ jobs:
                       if (isSearching) return;
                       isSearching = true;
                       
-                      // 显示加载状态
                       results.innerHTML = '<div class="loading">🔍 搜索中...</div>';
                       results.classList.add('show');
                       stats.textContent = '';
                       
-                      // 模拟搜索延迟
-                      setTimeout(() => {
-                          const lowerQuery = query.toLowerCase();
-                          const filtered = allFiles.filter(file => 
-                              file.path.toLowerCase().includes(lowerQuery) ||
-                              file.name.toLowerCase().includes(lowerQuery)
+                      const lowerQuery = query.toLowerCase();
+                      const results = [];
+                      
+                      // 搜索文件名
+                      if (searchMode === 'filename' || searchMode === 'both') {
+                          allFiles.forEach(file => {
+                              if (file.path.toLowerCase().includes(lowerQuery) || 
+                                  file.name.toLowerCase().includes(lowerQuery)) {
+                                  results.push({
+                                      ...file,
+                                      matchType: 'filename'
+                                  });
+                              }
+                          });
+                      }
+                      
+                      // 搜索文件内容
+                      if (searchMode === 'content' || searchMode === 'both') {
+                          const mdFiles = allFiles.filter(file => 
+                              file.name.endsWith('.md') || file.name.endsWith('.txt')
                           );
                           
-                          if (filtered.length === 0) {
+                          for (const file of mdFiles) {
+                              const content = await getFileContent(file);
+                              if (content.toLowerCase().includes(lowerQuery)) {
+                                  const existingIndex = results.findIndex(r => r.path === file.path);
+                                  const snippet = getContentSnippet(content, query);
+                                  
+                                  if (existingIndex >= 0) {
+                                      results[existingIndex].matchType = 'both';
+                                      results[existingIndex].snippet = snippet;
+                                  } else {
+                                      results.push({
+                                          ...file,
+                                          matchType: 'content',
+                                          snippet: snippet
+                                      });
+                                  }
+                              }
+                          }
+                      }
+                      
+                      // 去重
+                      const uniqueResults = results.filter((item, index, self) => 
+                          index === self.findIndex(t => t.path === item.path)
+                      );
+                      
+                      // 显示结果
+                      setTimeout(() => {
+                          if (uniqueResults.length === 0) {
                               results.innerHTML = '<div class="no-results">😔 没有找到匹配的文件</div>';
                               stats.textContent = '共找到 0 个文件';
                           } else {
-                              results.innerHTML = filtered.map(file => `
-                                  <div class="result-item" onclick="window.open('${file.url}', '_blank')">
-                                      <div class="result-name">${file.name}</div>
-                                      <div class="result-path">${file.path}</div>
-                                  </div>
-                              `).join('');
-                              stats.textContent = `共找到 ${filtered.length} 个文件`;
+                              results.innerHTML = uniqueResults.map(file => {
+                                  let matchIcon = '';
+                                  if (file.matchType === 'filename') matchIcon = '📄';
+                                  else if (file.matchType === 'content') matchIcon = '🔍';
+                                  else if (file.matchType === 'both') matchIcon = '🎯';
+                                  
+                                  return `
+                                      <div class="result-item" onclick="window.open('${file.url}', '_blank')">
+                                          <div class="result-name">
+                                              ${matchIcon} ${highlightText(file.name, query)}
+                                              ${file.matchType === 'content' || file.matchType === 'both' ? '<span class="content-match">内容匹配</span>' : ''}
+                                          </div>
+                                          <div class="result-path">${highlightText(file.path, query)}</div>
+                                          ${file.snippet ? `<div class="result-snippet">${highlightText(file.snippet, query)}</div>` : ''}
+                                      </div>
+                                  `;
+                              }).join('');
+                              stats.textContent = `共找到 ${uniqueResults.length} 个文件`;
                           }
                           
                           isSearching = false;
-                      }, 300);
+                      }, 100);
                   }
                   
                   // 回车搜索
@@ -331,7 +470,7 @@ jobs:
                       }
                   });
                   
-                  // 实时搜索（可选）
+                  // 实时搜索（防抖）
                   let searchTimeout;
                   searchInput.addEventListener('input', (e) => {
                       clearTimeout(searchTimeout);
@@ -355,7 +494,7 @@ jobs:
               </script>
           </body>
           </html>
-          EOF
+          HTML_EOF
           
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
