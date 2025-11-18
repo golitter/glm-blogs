@@ -49,46 +49,23 @@ jobs:
           
           echo "Getting recently modified files..."
           
-          # 生成最近文件HTML
-          echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
+          # 创建临时文件存储HTML内容
+          TEMP_HTML_FILE=$(mktemp)
           
-          # 方法1：使用git log获取所有修改过的md文件（包括更新、新增等）
-          # 获取最近30次提交中涉及的所有md文件，按最新修改时间排序
-          git log --since="30 days ago" --name-only --pretty=format:"%ct|%H|%s" -- "*.md" | \
+          # 使用更简单的方法获取最近修改的文件
+          # 方法1：使用git log获取最近修改的md文件
+          git log --since="30 days ago" --name-only --pretty=format:"%ct" -- "*.md" | \
           awk '
-          BEGIN { 
-            count = 0; 
-            current_time = "";
-            current_hash = "";
-            current_msg = "";
+          /^[0-9]+$/ { 
+            current_time = $0; 
+            next; 
           }
-          /^[0-9]+\|/ { 
-            split($0, parts, "|");
-            current_time = parts[1]; 
-            current_hash = parts[2];
-            current_msg = parts[3];
-            next;
-          }
-          /^[^0-9]/ && NF > 0 { 
-            # 跳过空行
-            if (current_time != "" && $0 ~ /\.md$/ && !/^\s*$/) {
-              # 记录文件及其最新的修改时间和提交信息
-              if (!file_time[$0] || current_time > file_time[$0]) {
-                file_time[$0] = current_time;
-                file_hash[$0] = current_hash;
-                file_msg[$0] = current_msg;
-              }
+          /^[^0-9]/ && NF > 0 && /\.md$/ { 
+            if (current_time != "" && !seen[$0]++) {
+              print current_time "|" $0;
             }
           }
-          END {
-            # 按修改时间排序并输出前5个
-            n = asorti(file_time, sorted_files, "@val_num_desc");
-            for (i = 1; i <= (n > 5 ? 5 : n); i++) {
-              file = sorted_files[i];
-              print file_time[file] "|" file_hash[file] "|" file "|" file_msg[file];
-            }
-          }
-          ' | while IFS='|' read -r timestamp commit_hash filepath commit_msg; do
+          ' | sort -nr | head -5 | while IFS='|' read -r timestamp filepath; do
             
             if [[ -n "$filepath" && -f "$filepath" ]]; then
               # 转换时间戳为中国时间格式
@@ -100,23 +77,24 @@ jobs:
               # 构建GitHub URL
               GITHUB_URL="https://github.com/golitter/glm-blogs/blob/master/$REL_PATH"
               
-              # 生成HTML，添加文件修改提示
-              echo "<div class=\"recent-file-item\">" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-name\" onclick=\"window.open('$GITHUB_URL', '_blank')\">$FILENAME</div>" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-path\">$REL_PATH</div>" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-date\">📝 $DATE</div>" >> $GITHUB_OUTPUT
-              echo "</div>" >> $GITHUB_OUTPUT
+              # 写入临时文件
+              echo "<div class=\"recent-file-item\">" >> $TEMP_HTML_FILE
+              echo "  <div class=\"recent-file-name\" onclick=\"window.open('$GITHUB_URL', '_blank')\">$FILENAME</div>" >> $TEMP_HTML_FILE
+              echo "  <div class=\"recent-file-path\">$REL_PATH</div>" >> $TEMP_HTML_FILE
+              echo "  <div class=\"recent-file-date\">📝 $DATE</div>" >> $TEMP_HTML_FILE
+              echo "</div>" >> $TEMP_HTML_FILE
               
               echo "Added: $FILENAME (Modified: $DATE)"
             fi
           done
           
           # 检查是否获取到足够的文件，如果不够则使用备用方法
-          FILE_COUNT=$(grep -c "recent-file-item" <<< "$(cat $GITHUB_OUTPUT | grep -A1000 'recent_files_html<<EOF' | grep -B1000 '^EOF$' | grep 'recent-file-item' || echo '')")
+          FILE_COUNT=$(grep -c "recent-file-item" $TEMP_HTML_FILE 2>/dev/null || echo "0")
           
           if [[ $FILE_COUNT -lt 3 ]]; then
-            echo "Using fallback method - getting files by last modification time..."
-            echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
+            echo "Using fallback method..."
+            # 清空临时文件
+            > $TEMP_HTML_FILE
             
             # 备用方法：使用find和stat获取最近修改的文件
             find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" -type f -exec stat -c "%Y %n" {} \; | \
@@ -131,18 +109,33 @@ jobs:
               # 构建GitHub URL
               GITHUB_URL="https://github.com/golitter/glm-blogs/blob/master/$REL_PATH"
               
-              # 生成HTML
-              echo "<div class=\"recent-file-item\">" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-name\" onclick=\"window.open('$GITHUB_URL', '_blank')\">$FILENAME</div>" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-path\">$REL_PATH</div>" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-date\">📁 $DATE</div>" >> $GITHUB_OUTPUT
-              echo "</div>" >> $GITHUB_OUTPUT
+              # 写入临时文件
+              echo "<div class=\"recent-file-item\">" >> $TEMP_HTML_FILE
+              echo "  <div class=\"recent-file-name\" onclick=\"window.open('$GITHUB_URL', '_blank')\">$FILENAME</div>" >> $TEMP_HTML_FILE
+              echo "  <div class=\"recent-file-path\">$REL_PATH</div>" >> $TEMP_HTML_FILE
+              echo "  <div class=\"recent-file-date\">📁 $DATE</div>" >> $TEMP_HTML_FILE
+              echo "</div>" >> $TEMP_HTML_FILE
               
               echo "Fallback added: $FILENAME ($DATE)"
             done
           fi
           
-          echo "EOF" >> $GITHUB_OUTPUT
+          # 读取临时文件内容并设置到输出变量
+          if [[ -f $TEMP_HTML_FILE && -s $TEMP_HTML_FILE ]]; then
+            # 使用printf避免heredoc问题
+            {
+              echo "recent_files_html<<EOF"
+              cat $TEMP_HTML_FILE
+              echo "EOF"
+            } >> $GITHUB_OUTPUT
+          else
+            # 如果没有文件，设置空值
+            echo "recent_files_html=<<EOF" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+          
+          # 清理临时文件
+          rm -f $TEMP_HTML_FILE
           
           echo "Total Markdown files: $MD_COUNT"
           echo "Recent files count: $FILE_COUNT"
@@ -154,7 +147,8 @@ jobs:
           # 获取当前中国时间作为更新时间
           UPDATE_TIME=$(TZ='Asia/Shanghai' date "+%Y-%m-%d %H:%M:%S")
           
-          cat > dist/index.html << HTML_EOF
+          # 创建HTML文件
+          cat > dist/index.html << 'HTML_EOF'
           <!DOCTYPE html>
           <html lang="zh-CN">
           <head>
@@ -413,14 +407,25 @@ jobs:
                   <div class="sidebar">
                       <div class="stats-card">
                           <h3>📊 仓库统计</h3>
-                          <div class="stats-number">${{ steps.stats.outputs.md_count }}</div>
+                          <div class="stats-number">HTML_EOF
+          
+          # 插入文件数量
+          echo '${{ steps.stats.outputs.md_count }}' >> dist/index.html
+          
+          cat >> dist/index.html << 'HTML_EOF'
+          </div>
                           <div class="stats-label">Markdown 文件</div>
                       </div>
                       
                       <div class="recent-files">
                           <h3>🕒 最近更新</h3>
                           <div id="recentFilesList">
-                              ${{ steps.stats.outputs.recent_files_html }}
+                              HTML_EOF
+          
+          # 插入最近文件列表
+          echo '${{ steps.stats.outputs.recent_files_html }}' >> dist/index.html
+          
+          cat >> dist/index.html << 'HTML_EOF'
                           </div>
                       </div>
                   </div>
@@ -473,7 +478,12 @@ jobs:
               </div>
               
               <div class="update-info">
-                  更新时间: $UPDATE_TIME (中国时间)
+                  更新时间: HTML_EOF
+          
+          # 插入更新时间
+          echo "$UPDATE_TIME (中国时间)" >> dist/index.html
+          
+          cat >> dist/index.html << 'HTML_EOF'
               </div>
 
               <script>
