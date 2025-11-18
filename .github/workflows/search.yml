@@ -113,7 +113,7 @@ jobs:
           <head>
               <meta charset="UTF-8">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>GLM Blogs 搜索</title>
+              <title>GLM Blogs</title>
               <style>
                   * { margin: 0; padding: 0; box-sizing: border-box; }
                   body {
@@ -365,9 +365,9 @@ jobs:
                   <!-- 左侧信息面板 -->
                   <div class="sidebar">
                       <div class="stats-card">
-                          <h3>📊 仓库统计</h3>
+                          <h3>📊 博客数量</h3>
                           <div class="stats-number">${{ steps.stats.outputs.md_count }}</div>
-                          <div class="stats-label">Markdown 文件</div>
+                          <div class="stats-label">篇</div>
                       </div>
                       
                       <div class="recent-files">
@@ -381,7 +381,7 @@ jobs:
                   <!-- 右侧主要内容 -->
                   <div class="container">
                       <h1>📚 GLM Blogs</h1>
-                      <p class="subtitle">在GitHub仓库中搜索Golemon的技术博客文件</p>
+                      <p class="subtitle">在GitHub仓库中搜索博客内容</p>
                       
                       <form id="searchForm" onsubmit="performSearch(event)">
                           <div class="search-container">
