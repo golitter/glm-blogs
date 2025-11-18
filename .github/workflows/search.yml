@@ -112,32 +112,6 @@ jobs:
                       height: 22px;
                       fill: white;
                   }
-                  .search-options {
-                      display: flex;
-                      gap: 15px;
-                      margin-bottom: 35px;
-                      justify-content: center;
-                      flex-wrap: wrap;
-                  }
-                  .search-option {
-                      padding: 12px 20px;
-                      border: 2px solid #e1e8ed;
-                      border-radius: 25px;
-                      background: white;
-                      cursor: pointer;
-                      transition: all 0.3s ease;
-                      font-size: 15px;
-                      font-weight: 500;
-                  }
-                  .search-option:hover {
-                      border-color: #667eea;
-                      background: #f8f9ff;
-                  }
-                  .search-option.active {
-                      background: #667eea;
-                      color: white;
-                      border-color: #667eea;
-                  }
                   .quick-links {
                       margin-top: 40px;
                       padding-top: 35px;
@@ -202,16 +176,6 @@ jobs:
                       left: 0;
                       font-weight: bold;
                   }
-                  .loading {
-                      display: none;
-                      text-align: center;
-                      color: #667eea;
-                      font-size: 16px;
-                      margin-top: 20px;
-                  }
-                  .loading.show {
-                      display: block;
-                  }
               </style>
           </head>
           <body>
@@ -219,34 +183,24 @@ jobs:
                   <h1>📚 GLM Blogs</h1>
                   <p class="subtitle">在GitHub仓库中搜索你的技术博客文件</p>
                   
-                  <div class="search-options">
-                      <div class="search-option active" data-type="filename" onclick="setSearchType('filename')">
-                          📄 文件名
+                  <form id="searchForm" onsubmit="performSearch(event)">
+                      <div class="search-container">
+                          <input 
+                              type="text" 
+                              class="search-box" 
+                              placeholder="输入搜索关键词..." 
+                              id="searchInput"
+                              name="q"
+                              autocomplete="off"
+                              required
+                          >
+                          <button type="submit" class="search-btn">
+                              <svg viewBox="0 0 24 24">
+                                  <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                              </svg>
+                          </button>
                       </div>
-                      <div class="search-option" data-type="content" onclick="setSearchType('content')">
-                          🔍 内容
-                      </div>
-                      <div class="search-option" data-type="path" onclick="setSearchType('path')">
-                          📁 路径
-                      </div>
-                  </div>
-                  
-                  <div class="search-container">
-                      <input 
-                          type="text" 
-                          class="search-box" 
-                          placeholder="输入搜索关键词..." 
-                          id="searchInput"
-                          autocomplete="off"
-                      >
-                      <button class="search-btn" onclick="performSearch()">
-                          <svg viewBox="0 0 24 24">
-                              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                          </svg>
-                      </button>
-                  </div>
-                  
-                  <div class="loading" id="loading">🔍 正在跳转到GitHub搜索...</div>
+                  </form>
                   
                   <div class="quick-links">
                       <h3>快速访问</h3>
@@ -261,9 +215,9 @@ jobs:
                   <div class="search-tips">
                       <h4>💡 搜索技巧</h4>
                       <ul>
-                          <li>文件名搜索：直接输入文件名或扩展名</li>
-                          <li>内容搜索：输入文件中的关键词</li>
-                          <li>路径搜索：输入目录名或路径</li>
+                          <li>直接输入关键词搜索文件内容</li>
+                          <li>使用 filename:xxx 搜索特定文件名</li>
+                          <li>使用 path:xxx 搜索特定路径</li>
                           <li>支持空格分隔多个关键词</li>
                           <li>搜索结果将在新标签页中打开</li>
                       </ul>
@@ -271,90 +225,28 @@ jobs:
               </div>
 
               <script>
-                  let searchType = 'filename';
-                  const searchInput = document.getElementById('searchInput');
-                  const loading = document.getElementById('loading');
-                  
-                  // 设置搜索类型
-                  function setSearchType(type) {
-                      searchType = type;
-                      document.querySelectorAll('.search-option').forEach(opt => {
-                          opt.classList.remove('active');
-                      });
-                      document.querySelector(`[data-type="${type}"]`).classList.add('active');
-                      
-                      // 更新占位符
-                      if (type === 'filename') {
-                          searchInput.placeholder = '输入文件名或扩展名...';
-                      } else if (type === 'content') {
-                          searchInput.placeholder = '输入文件内容关键词...';
-                      } else if (type === 'path') {
-                          searchInput.placeholder = '输入目录路径...';
-                      }
-                  }
-                  
-                  // 构建GitHub搜索URL
-                  function buildSearchUrl(query, type) {
-                      const baseUrl = 'https://github.com/golitter/glm-blogs/search';
-                      const encodedQuery = encodeURIComponent(query);
-                      
-                      switch(type) {
-                          case 'filename':
-                              return `${baseUrl}?q=${encodedQuery}+filename%3A${encodedQuery}`;
-                          case 'content':
-                              return `${baseUrl}?q=${encodedQuery}`;
-                          case 'path':
-                              return `${baseUrl}?q=${encodedQuery}+path%3A${encodedQuery}`;
-                          default:
-                              return `${baseUrl}?q=${encodedQuery}`;
-                      }
-                  }
-                  
                   // 执行搜索
-                  function performSearch() {
-                      const query = searchInput.value.trim();
+                  function performSearch(event) {
+                      event.preventDefault();
+                      
+                      const query = document.getElementById('searchInput').value.trim();
                       
                       if (!query) {
-                          searchInput.focus();
-                          searchInput.style.borderColor = '#ff6b6b';
-                          setTimeout(() => {
-                              searchInput.style.borderColor = '#e1e8ed';
-                          }, 2000);
                           return;
                       }
                       
-                      // 显示加载状态
-                      loading.classList.add('show');
+                      // 构建GitHub搜索URL
+                      const baseUrl = 'https://github.com/search';
+                      const repoQuery = `repo:golitter/glm-blogs ${query}`;
+                      const searchUrl = `${baseUrl}?q=${encodeURIComponent(repoQuery)}&type=code`;
                       
-                      // 构建搜索URL
-                      const searchUrl = buildSearchUrl(query, searchType);
-                      
-                      // 延迟跳转，让用户看到加载状态
-                      setTimeout(() => {
-                          window.open(searchUrl, '_blank');
-                          loading.classList.remove('show');
-                      }, 500);
+                      // 在新标签页打开搜索结果
+                      window.open(searchUrl, '_blank');
                   }
-                  
-                  // 回车搜索
-                  searchInput.addEventListener('keypress', (e) => {
-                      if (e.key === 'Enter') {
-                          performSearch();
-                      }
-                  });
-                  
-                  // 实时输入提示（可选）
-                  searchInput.addEventListener('input', (e) => {
-                      if (e.target.value.trim()) {
-                          searchInput.style.borderColor = '#667eea';
-                      } else {
-                          searchInput.style.borderColor = '#e1e8ed';
-                      }
-                  });
                   
                   // 页面加载完成后聚焦搜索框
                   window.addEventListener('load', () => {
-                      searchInput.focus();
+                      document.getElementById('searchInput').focus();
                   });
                   
                   // 添加键盘快捷键
@@ -362,8 +254,8 @@ jobs:
                       // Ctrl/Cmd + K 聚焦搜索框
                       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                           e.preventDefault();
-                          searchInput.focus();
-                          searchInput.select();
+                          document.getElementById('searchInput').focus();
+                          document.getElementById('searchInput').select();
                       }
                   });
               </script>
