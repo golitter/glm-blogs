@@ -1,0 +1,133 @@
+name: Deploy Search Page
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Build search index
+        run: |
+          mkdir -p dist
+          cat > dist/search.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="zh-CN">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>GLM Blogs 搜索</title>
+              <style>
+                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f6f8fa; }
+                  .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+                  h1 { color: #24292e; margin-bottom: 30px; }
+                  .search-box { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #e1e4e8; border-radius: 6px; margin-bottom: 20px; }
+                  .search-box:focus { outline: none; border-color: #0366d6; }
+                  .file-list { list-style: none; padding: 0; }
+                  .file-item { padding: 15px; border: 1px solid #e1e4e8; margin-bottom: 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+                  .file-item:hover { background: #f6f8fa; transform: translateX(5px); }
+                  .file-name { font-weight: bold; color: #0366d6; margin-bottom: 5px; }
+                  .file-path { color: #586069; font-size: 14px; margin-bottom: 5px; }
+                  .file-time { color: #586069; font-size: 12px; }
+                  .no-results { text-align: center; color: #586069; padding: 40px; }
+                  .stats { margin-bottom: 20px; color: #586069; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>📚 GLM Blogs 文件搜索</h1>
+                  <input type="text" class="search-box" placeholder="搜索文件名或路径..." id="searchInput">
+                  <div class="stats" id="stats"></div>
+                  <ul class="file-list" id="fileList"></ul>
+              </div>
+
+              <script>
+                  const files = [
+          EOF
+          
+          # 获取仓库文件列表
+          gh api repos/golitter/glm-blogs/git/trees/main?recursive=1 --jq '.tree[] | select(.type == "blob") | {path: .path, url: ("https://github.com/golitter/glm-blogs/blob/main/" + .path)}' | \
+          jq -r '"{path: \"" + .path + "\", url: \"" + .url + "\"},"' >> dist/search.html
+          
+          cat >> dist/search.html << 'EOF'
+                  ];
+                  
+                  const searchInput = document.getElementById('searchInput');
+                  const fileList = document.getElementById('fileList');
+                  const stats = document.getElementById('stats');
+                  
+                  function renderFiles(filesToRender) {
+                      if (filesToRender.length === 0) {
+                          fileList.innerHTML = '<div class="no-results">没有找到匹配的文件</div>';
+                          stats.textContent = `共 0 个文件`;
+                          return;
+                      }
+                      
+                      fileList.innerHTML = filesToRender.map(file => `
+                          <li class="file-item" onclick="window.open('${file.url}', '_blank')">
+                              <div class="file-name">${file.path.split('/').pop()}</div>
+                              <div class="file-path">${file.path}</div>
+                              <div class="file-time">点击查看文件</div>
+                          </li>
+                      `).join('');
+                      
+                      stats.textContent = `共找到 ${filesToRender.length} 个文件`;
+                  }
+                  
+                  function searchFiles(query) {
+                      if (!query) {
+                          return files;
+                      }
+                      
+                      const lowerQuery = query.toLowerCase();
+                      return files.filter(file => 
+                          file.path.toLowerCase().includes(lowerQuery)
+                      );
+                  }
+                  
+                  searchInput.addEventListener('input', (e) => {
+                      const results = searchFiles(e.target.value);
+                      renderFiles(results);
+                  });
+                  
+                  // 初始显示所有文件
+                  renderFiles(files);
+              </script>
+          </body>
+          </html>
+          EOF
+          
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
