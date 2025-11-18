@@ -50,6 +50,8 @@ jobs:
           # 生成最近文件HTML
           echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
           
+          # 禁用路径名的引号转义，确保中文路径显示正常
+          git config --global core.quotepath false
           # 使用git log获取最近提交的文件
           git log --name-only --pretty=format:"%ct|%H" -20 -- "*.md" | \
           awk '
