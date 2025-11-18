@@ -11,10 +11,10 @@ on:
     paths:
       - '**.md'
       - '.github/workflows/search.yml'
-  workflow_dispatch:
-  schedule:
-    # 每天北京时间上午9点（UTC时间1点）自动更新一次
-    - cron: '0 1 * * *'
+#   workflow_dispatch:
+#   schedule:
+#     # 每天北京时间上午9点（UTC时间1点）自动更新一次
+#     - cron: '0 1 * * *'
 
 permissions:
   contents: read
