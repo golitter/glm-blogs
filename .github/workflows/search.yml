@@ -26,6 +26,35 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
         
+      - name: Get repository stats
+        id: stats
+        run: |
+          # 统计markdown文件数量
+          MD_COUNT=$(find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" | wc -l)
+          echo "md_count=$MD_COUNT" >> $GITHUB_OUTPUT
+          
+          # 获取最近更新的5个文件
+          RECENT_FILES=$(find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" -exec stat -c "%Y %n" {} \; | sort -nr | head -5 | while read timestamp file; do
+            # 转换时间戳为可读格式
+            DATE=$(date -d "@$timestamp" "+%Y-%m-%d %H:%M")
+            # 获取相对路径（去掉开头的./）
+            REL_PATH=${file#./}
+            # 获取文件名
+            FILENAME=$(basename "$file")
+            # 构建GitHub URL
+            GITHUB_URL="https://github.com/golitter/glm-blogs/blob/main/$REL_PATH"
+            echo "$DATE|$FILENAME|$REL_PATH|$GITHUB_URL"
+          done)
+          
+          # 将最近文件信息存储到输出中
+          echo "recent_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$RECENT_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "Markdown files: $MD_COUNT"
+          echo "Recent files:"
+          echo "$RECENT_FILES"
+        
       - name: Build search page
         run: |
           mkdir -p dist
@@ -47,14 +76,95 @@ jobs:
                       justify-content: center;
                       padding: 20px;
                   }
+                  .main-wrapper {
+                      display: flex;
+                      gap: 20px;
+                      max-width: 900px;
+                      width: 100%;
+                      align-items: flex-start;
+                  }
+                  .sidebar {
+                      background: white;
+                      padding: 30px;
+                      border-radius: 20px;
+                      box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+                      width: 280px;
+                      flex-shrink: 0;
+                  }
                   .container {
                       background: white;
                       padding: 50px;
                       border-radius: 20px;
                       box-shadow: 0 25px 50px rgba(0,0,0,0.15);
-                      width: 100%;
-                      max-width: 600px;
+                      flex: 1;
                       text-align: center;
+                  }
+                  .stats-card {
+                      background: #f8f9fa;
+                      padding: 20px;
+                      border-radius: 12px;
+                      margin-bottom: 25px;
+                      border-left: 4px solid #667eea;
+                  }
+                  .stats-card h3 {
+                      color: #333;
+                      margin-bottom: 15px;
+                      font-size: 1.2em;
+                      font-weight: 600;
+                  }
+                  .stats-number {
+                      font-size: 2.5em;
+                      font-weight: 700;
+                      color: #667eea;
+                      margin-bottom: 5px;
+                  }
+                  .stats-label {
+                      color: #666;
+                      font-size: 14px;
+                  }
+                  .recent-files {
+                      background: #f8f9fa;
+                      padding: 20px;
+                      border-radius: 12px;
+                      border-left: 4px solid #28a745;
+                  }
+                  .recent-files h3 {
+                      color: #333;
+                      margin-bottom: 15px;
+                      font-size: 1.2em;
+                      font-weight: 600;
+                  }
+                  .recent-file-item {
+                      margin-bottom: 12px;
+                      padding-bottom: 12px;
+                      border-bottom: 1px solid #e1e8ed;
+                  }
+                  .recent-file-item:last-child {
+                      margin-bottom: 0;
+                      padding-bottom: 0;
+                      border-bottom: none;
+                  }
+                  .recent-file-name {
+                      font-weight: 500;
+                      color: #333;
+                      font-size: 14px;
+                      margin-bottom: 4px;
+                      cursor: pointer;
+                      transition: color 0.2s ease;
+                  }
+                  .recent-file-name:hover {
+                      color: #667eea;
+                  }
+                  .recent-file-path {
+                      color: #666;
+                      font-size: 12px;
+                      font-family: 'Monaco', 'Courier New', monospace;
+                      margin-bottom: 4px;
+                  }
+                  .recent-file-date {
+                      color: #28a745;
+                      font-size: 11px;
+                      font-weight: 500;
                   }
                   h1 {
                       color: #333;
@@ -176,50 +286,96 @@ jobs:
                       left: 0;
                       font-weight: bold;
                   }
+                  @media (max-width: 768px) {
+                      .main-wrapper {
+                          flex-direction: column;
+                          align-items: center;
+                      }
+                      .sidebar {
+                          width: 100%;
+                          max-width: 400px;
+                      }
+                  }
               </style>
           </head>
           <body>
-              <div class="container">
-                  <h1>📚 GLM Blogs</h1>
-                  <p class="subtitle">在GitHub仓库中搜索Golemon的技术博客文件</p>
-                  
-                  <form id="searchForm" onsubmit="performSearch(event)">
-                      <div class="search-container">
-                          <input 
-                              type="text" 
-                              class="search-box" 
-                              placeholder="输入搜索关键词..." 
-                              id="searchInput"
-                              name="q"
-                              autocomplete="off"
-                              required
-                          >
-                          <button type="submit" class="search-btn">
-                              <svg viewBox="0 0 24 24">
-                                  <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                              </svg>
-                          </button>
+              <div class="main-wrapper">
+                  <!-- 左侧信息面板 -->
+                  <div class="sidebar">
+                      <div class="stats-card">
+                          <h3>📊 仓库统计</h3>
+                          <div class="stats-number">${{ steps.stats.outputs.md_count }}</div>
+                          <div class="stats-label">Markdown 文件</div>
                       </div>
-                  </form>
-                  
-                  <div class="quick-links">
-                      <h3>快速访问</h3>
-                      <div class="link-buttons">
-                          <a href="https://github.com/golitter" class="link-btn" target="_blank">👤 GitHub主页</a>
-                          <a href="https://github.com/golitter/glm-blogs" class="link-btn" target="_blank">🏠 仓库首页</a>
-                          <a href="https://github.com/golitter/glm-blogs/commits/master/" class="link-btn" target="_blank">📝 提交历史</a>
-                          <a href="https://github.com/golitter/glm-blogs/issues" class="link-btn" target="_blank">🐛 Issues</a>
-                          <a href="https://github.com/golitter/glm-blogs/pulls" class="link-btn" target="_blank">🔄 Pull Requests</a>
+                      
+                      <div class="recent-files">
+                          <h3>🕒 最近更新</h3>
+                          <div id="recentFilesList">
+          HTML_EOF
+          
+          # 添加最近文件列表
+          IFS=$'\n'
+          for file_info in ${{ steps.stats.outputs.recent_files }}; do
+            if [[ -n "$file_info" ]]; then
+              IFS='|' read -r date filename path url <<< "$file_info"
+              cat >> dist/index.html << FILE_EOF
+                              <div class="recent-file-item">
+                                  <div class="recent-file-name" onclick="window.open('$url', '_blank')">$filename</div>
+                                  <div class="recent-file-path">$path</div>
+                                  <div class="recent-file-date">$date</div>
+                              </div>
+          FILE_EOF
+            fi
+          done
+          
+          cat >> dist/index.html << 'HTML_EOF'
+                          </div>
                       </div>
                   </div>
                   
-                  <div class="search-tips">
-                      <h4>💡 搜索技巧</h4>
-                      <ul>
-                          <li>直接输入关键词搜索文件内容</li>
-                          <li>支持空格分隔多个关键词</li>
-                          <li>搜索结果将在新标签页中打开</li>
-                      </ul>
+                  <!-- 右侧主要内容 -->
+                  <div class="container">
+                      <h1>📚 GLM Blogs</h1>
+                      <p class="subtitle">在GitHub仓库中搜索Golemon的技术博客文件</p>
+                      
+                      <form id="searchForm" onsubmit="performSearch(event)">
+                          <div class="search-container">
+                              <input 
+                                  type="text" 
+                                  class="search-box" 
+                                  placeholder="输入搜索关键词..." 
+                                  id="searchInput"
+                                  name="q"
+                                  autocomplete="off"
+                                  required
+                              >
+                              <button type="submit" class="search-btn">
+                                  <svg viewBox="0 0 24 24">
+                                      <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                                  </svg>
+                              </button>
+                          </div>
+                      </form>
+                      
+                      <div class="quick-links">
+                          <h3>快速访问</h3>
+                          <div class="link-buttons">
+                              <a href="https://github.com/golitter" class="link-btn" target="_blank">👤 GitHub主页</a>
+                              <a href="https://github.com/golitter/glm-blogs" class="link-btn" target="_blank">🏠 仓库首页</a>
+                              <a href="https://github.com/golitter/glm-blogs/commits/master/" class="link-btn" target="_blank">📝 提交历史</a>
+                              <a href="https://github.com/golitter/glm-blogs/issues" class="link-btn" target="_blank">🐛 Issues</a>
+                              <a href="https://github.com/golitter/glm-blogs/pulls" class="link-btn" target="_blank">🔄 Pull Requests</a>
+                          </div>
+                      </div>
+                      
+                      <div class="search-tips">
+                          <h4>💡 搜索技巧</h4>
+                          <ul>
+                              <li>直接输入关键词搜索文件内容</li>
+                              <li>支持空格分隔多个关键词</li>
+                              <li>搜索结果将在新标签页中打开</li>
+                          </ul>
+                      </div>
                   </div>
               </div>
 
