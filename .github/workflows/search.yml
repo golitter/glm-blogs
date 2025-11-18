@@ -26,7 +26,7 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
         
-      - name: Build search index
+      - name: Build search page
         run: |
           mkdir -p dist
           cat > dist/search.html << 'EOF'
@@ -37,80 +37,321 @@ jobs:
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
               <title>GLM Blogs 搜索</title>
               <style>
-                  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 20px; background: #f6f8fa; }
-                  .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-                  h1 { color: #24292e; margin-bottom: 30px; }
-                  .search-box { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #e1e4e8; border-radius: 6px; margin-bottom: 20px; }
-                  .search-box:focus { outline: none; border-color: #0366d6; }
-                  .file-list { list-style: none; padding: 0; }
-                  .file-item { padding: 15px; border: 1px solid #e1e4e8; margin-bottom: 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-                  .file-item:hover { background: #f6f8fa; transform: translateX(5px); }
-                  .file-name { font-weight: bold; color: #0366d6; margin-bottom: 5px; }
-                  .file-path { color: #586069; font-size: 14px; margin-bottom: 5px; }
-                  .file-time { color: #586069; font-size: 12px; }
-                  .no-results { text-align: center; color: #586069; padding: 40px; }
-                  .stats { margin-bottom: 20px; color: #586069; }
+                  * {
+                      margin: 0;
+                      padding: 0;
+                      box-sizing: border-box;
+                  }
+                  
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      min-height: 100vh;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      padding: 20px;
+                  }
+                  
+                  .container {
+                      background: white;
+                      padding: 40px;
+                      border-radius: 20px;
+                      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                      width: 100%;
+                      max-width: 600px;
+                      text-align: center;
+                  }
+                  
+                  h1 {
+                      color: #333;
+                      margin-bottom: 10px;
+                      font-size: 2.5em;
+                      font-weight: 700;
+                  }
+                  
+                  .subtitle {
+                      color: #666;
+                      margin-bottom: 40px;
+                      font-size: 1.1em;
+                  }
+                  
+                  .search-container {
+                      position: relative;
+                      margin-bottom: 30px;
+                  }
+                  
+                  .search-box {
+                      width: 100%;
+                      padding: 18px 60px 18px 25px;
+                      font-size: 18px;
+                      border: 3px solid #e1e8ed;
+                      border-radius: 50px;
+                      outline: none;
+                      transition: all 0.3s ease;
+                      background: #f8f9fa;
+                  }
+                  
+                  .search-box:focus {
+                      border-color: #667eea;
+                      background: white;
+                      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+                  }
+                  
+                  .search-btn {
+                      position: absolute;
+                      right: 8px;
+                      top: 50%;
+                      transform: translateY(-50%);
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      border: none;
+                      border-radius: 50%;
+                      width: 45px;
+                      height: 45px;
+                      cursor: pointer;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      transition: all 0.3s ease;
+                  }
+                  
+                  .search-btn:hover {
+                      transform: translateY(-50%) scale(1.1);
+                  }
+                  
+                  .search-btn svg {
+                      width: 20px;
+                      height: 20px;
+                      fill: white;
+                  }
+                  
+                  .results {
+                      text-align: left;
+                      max-height: 400px;
+                      overflow-y: auto;
+                      display: none;
+                  }
+                  
+                  .results.show {
+                      display: block;
+                  }
+                  
+                  .result-item {
+                      padding: 15px 20px;
+                      border: 1px solid #e1e8ed;
+                      border-radius: 12px;
+                      margin-bottom: 10px;
+                      cursor: pointer;
+                      transition: all 0.2s ease;
+                      background: #f8f9fa;
+                  }
+                  
+                  .result-item:hover {
+                      background: #e8f0fe;
+                      transform: translateX(5px);
+                      border-color: #667eea;
+                  }
+                  
+                  .result-name {
+                      font-weight: 600;
+                      color: #333;
+                      margin-bottom: 5px;
+                      font-size: 16px;
+                  }
+                  
+                  .result-path {
+                      color: #666;
+                      font-size: 14px;
+                      font-family: 'Monaco', 'Courier New', monospace;
+                  }
+                  
+                  .no-results {
+                      text-align: center;
+                      color: #666;
+                      padding: 40px;
+                      font-style: italic;
+                  }
+                  
+                  .loading {
+                      text-align: center;
+                      color: #666;
+                      padding: 20px;
+                  }
+                  
+                  .stats {
+                      color: #666;
+                      font-size: 14px;
+                      margin-bottom: 15px;
+                      text-align: center;
+                  }
+                  
+                  .quick-links {
+                      margin-top: 30px;
+                      padding-top: 30px;
+                      border-top: 1px solid #e1e8ed;
+                  }
+                  
+                  .quick-links h3 {
+                      color: #333;
+                      margin-bottom: 15px;
+                      font-size: 1.2em;
+                  }
+                  
+                  .link-buttons {
+                      display: flex;
+                      gap: 10px;
+                      flex-wrap: wrap;
+                      justify-content: center;
+                  }
+                  
+                  .link-btn {
+                      padding: 8px 16px;
+                      background: #f0f2f5;
+                      border: 1px solid #ddd;
+                      border-radius: 20px;
+                      text-decoration: none;
+                      color: #333;
+                      font-size: 14px;
+                      transition: all 0.2s ease;
+                  }
+                  
+                  .link-btn:hover {
+                      background: #667eea;
+                      color: white;
+                      border-color: #667eea;
+                  }
               </style>
           </head>
           <body>
               <div class="container">
-                  <h1>📚 GLM Blogs 文件搜索</h1>
-                  <input type="text" class="search-box" placeholder="搜索文件名或路径..." id="searchInput">
+                  <h1>📚 GLM Blogs</h1>
+                  <p class="subtitle">搜索你的技术博客文件</p>
+                  
+                  <div class="search-container">
+                      <input 
+                          type="text" 
+                          class="search-box" 
+                          placeholder="输入文件名或关键词搜索..." 
+                          id="searchInput"
+                          autocomplete="off"
+                      >
+                      <button class="search-btn" onclick="performSearch()">
+                          <svg viewBox="0 0 24 24">
+                              <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                          </svg>
+                      </button>
+                  </div>
+                  
                   <div class="stats" id="stats"></div>
-                  <ul class="file-list" id="fileList"></ul>
+                  <div class="results" id="results"></div>
+                  
+                  <div class="quick-links">
+                      <h3>快速访问</h3>
+                      <div class="link-buttons">
+                          <a href="https://github.com/golitter/glm-blogs/tree/main/llm" class="link-btn">LLM</a>
+                          <a href="https://github.com/golitter/glm-blogs/tree/main/ml" class="link-btn">机器学习</a>
+                          <a href="https://github.com/golitter/glm-blogs/tree/main/linux" class="link-btn">Linux</a>
+                          <a href="https://github.com/golitter/glm-blogs/tree/main/others" class="link-btn">其他</a>
+                      </div>
+                  </div>
               </div>
 
               <script>
-                  const files = [
-          EOF
-          
-          # 获取仓库文件列表
-          gh api repos/golitter/glm-blogs/git/trees/main?recursive=1 --jq '.tree[] | select(.type == "blob") | {path: .path, url: ("https://github.com/golitter/glm-blogs/blob/main/" + .path)}' | \
-          jq -r '"{path: \"" + .path + "\", url: \"" + .url + "\"},"' >> dist/search.html
-          
-          cat >> dist/search.html << 'EOF'
-                  ];
+                  let allFiles = [];
+                  let isSearching = false;
                   
                   const searchInput = document.getElementById('searchInput');
-                  const fileList = document.getElementById('fileList');
+                  const results = document.getElementById('results');
                   const stats = document.getElementById('stats');
                   
-                  function renderFiles(filesToRender) {
-                      if (filesToRender.length === 0) {
-                          fileList.innerHTML = '<div class="no-results">没有找到匹配的文件</div>';
-                          stats.textContent = `共 0 个文件`;
+                  // 加载所有文件
+                  async function loadAllFiles() {
+                      try {
+                          const response = await fetch('https://api.github.com/repos/golitter/glm-blogs/git/trees/main?recursive=1');
+                          const data = await response.json();
+                          allFiles = data.tree
+                              .filter(item => item.type === 'blob')
+                              .map(item => ({
+                                  path: item.path,
+                                  name: item.path.split('/').pop(),
+                                  url: `https://github.com/golitter/glm-blogs/blob/main/${item.path}`
+                              }));
+                      } catch (error) {
+                          console.error('Error loading files:', error);
+                      }
+                  }
+                  
+                  // 执行搜索
+                  function performSearch() {
+                      const query = searchInput.value.trim();
+                      
+                      if (!query) {
+                          results.classList.remove('show');
+                          stats.textContent = '';
                           return;
                       }
                       
-                      fileList.innerHTML = filesToRender.map(file => `
-                          <li class="file-item" onclick="window.open('${file.url}', '_blank')">
-                              <div class="file-name">${file.path.split('/').pop()}</div>
-                              <div class="file-path">${file.path}</div>
-                              <div class="file-time">点击查看文件</div>
-                          </li>
-                      `).join('');
+                      if (isSearching) return;
+                      isSearching = true;
                       
-                      stats.textContent = `共找到 ${filesToRender.length} 个文件`;
+                      // 显示加载状态
+                      results.innerHTML = '<div class="loading">🔍 搜索中...</div>';
+                      results.classList.add('show');
+                      stats.textContent = '';
+                      
+                      // 模拟搜索延迟
+                      setTimeout(() => {
+                          const lowerQuery = query.toLowerCase();
+                          const filtered = allFiles.filter(file => 
+                              file.path.toLowerCase().includes(lowerQuery) ||
+                              file.name.toLowerCase().includes(lowerQuery)
+                          );
+                          
+                          if (filtered.length === 0) {
+                              results.innerHTML = '<div class="no-results">😔 没有找到匹配的文件</div>';
+                              stats.textContent = '共找到 0 个文件';
+                          } else {
+                              results.innerHTML = filtered.map(file => `
+                                  <div class="result-item" onclick="window.open('${file.url}', '_blank')">
+                                      <div class="result-name">${file.name}</div>
+                                      <div class="result-path">${file.path}</div>
+                                  </div>
+                              `).join('');
+                              stats.textContent = `共找到 ${filtered.length} 个文件`;
+                          }
+                          
+                          isSearching = false;
+                      }, 300);
                   }
                   
-                  function searchFiles(query) {
-                      if (!query) {
-                          return files;
+                  // 回车搜索
+                  searchInput.addEventListener('keypress', (e) => {
+                      if (e.key === 'Enter') {
+                          performSearch();
                       }
-                      
-                      const lowerQuery = query.toLowerCase();
-                      return files.filter(file => 
-                          file.path.toLowerCase().includes(lowerQuery)
-                      );
-                  }
-                  
-                  searchInput.addEventListener('input', (e) => {
-                      const results = searchFiles(e.target.value);
-                      renderFiles(results);
                   });
                   
-                  // 初始显示所有文件
-                  renderFiles(files);
+                  // 实时搜索（可选）
+                  let searchTimeout;
+                  searchInput.addEventListener('input', (e) => {
+                      clearTimeout(searchTimeout);
+                      searchTimeout = setTimeout(() => {
+                          if (e.target.value.trim()) {
+                              performSearch();
+                          } else {
+                              results.classList.remove('show');
+                              stats.textContent = '';
+                          }
+                      }, 500);
+                  });
+                  
+                  // 页面加载时获取文件列表
+                  loadAllFiles();
+                  
+                  // 页面加载完成后聚焦搜索框
+                  window.addEventListener('load', () => {
+                      searchInput.focus();
+                  });
               </script>
           </body>
           </html>
