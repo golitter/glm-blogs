@@ -202,7 +202,7 @@ print("LoRA 权重合并完成！")
 
 # --- 4. 【可选但推荐】保存合并后的模型 ---
 # 你可以选择一个新目录来保存合并后的模型，以免覆盖原始模型
-merged_model_path = "./Qwen3-4B-HuanHuan-Merged"
+merged_model_path = "./Qwen3-8B-HuanHuan-Merged"
 print(f"正在将合并后的模型保存到: {merged_model_path}")
 merged_model.save_pretrained(merged_model_path)
 # 也要保存 tokenizer，以便后续使用
