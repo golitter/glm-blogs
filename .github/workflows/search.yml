@@ -13,6 +13,7 @@ on:
       - '.github/workflows/search.yml'
   workflow_dispatch:
   schedule:
+    # 每天北京时间上午9点（UTC时间1点）自动更新一次
     - cron: '0 1 * * *'
 
 permissions:
@@ -39,32 +40,48 @@ jobs:
       - name: Get repository stats
         id: stats
         run: |
-          MD_COUNT=$(find . -type f -name "*.md" -not -path "./.git/*" -not -path "./dist/*" | wc -l)
+          # 统计markdown文件数量
+          MD_COUNT=$(find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" | wc -l)
           echo "md_count=$MD_COUNT" >> $GITHUB_OUTPUT
-
+          
+          # 获取最近更新的文件 - 使用更简单的方法
+          echo "Getting recent files..."
+          
+          # 生成最近文件HTML
           echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
-          find . -type f -name "*.md" -not -path "./.git/*" -not -path "./dist/*" -print0 | \
-            xargs -0 stat -c '%Y\t%n' | \
-            sort -nr | head -n 5 | \
-            while IFS=$'\t' read -r timestamp filepath; do
-              DATE=$(TZ='Asia/Shanghai' date -d "@$timestamp" "+%Y-%m-%d %H:%M:%S CST")
-              REL_PATH=${filepath#./}
-              FILENAME=$(basename "$filepath")
-              GITHUB_URL="https://github.com/golitter/glm-blogs/blob/master/$REL_PATH"
-
-              echo "<div class=\"recent-file-item\">" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-name\" onclick=\"window.open('$GITHUB_URL', '_blank')\">$FILENAME</div>" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-path\">$REL_PATH</div>" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-date\">$DATE</div>" >> $GITHUB_OUTPUT
-              echo "</div>" >> $GITHUB_OUTPUT
-            done
+          
+          # 获取最近5个修改的markdown文件
+          find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" -exec stat -c "%Y %n" {} \; | \
+          sort -nr | head -5 | while read timestamp filepath; do
+            
+            # 转换时间戳为可读格式
+            DATE=$(date -d "@$timestamp" "+%Y-%m-%d %H:%M")
+            # 获取相对路径（去掉开头的./）
+            REL_PATH=${filepath#./}
+            # 获取文件名
+            FILENAME=$(basename "$filepath")
+            # 构建GitHub URL - 使用master分支
+            GITHUB_URL="https://github.com/golitter/glm-blogs/blob/master/$REL_PATH"
+            
+            # 生成HTML
+            echo "<div class=\"recent-file-item\">" >> $GITHUB_OUTPUT
+            echo "  <div class=\"recent-file-name\" onclick=\"window.open('$GITHUB_URL', '_blank')\">$FILENAME</div>" >> $GITHUB_OUTPUT
+            echo "  <div class=\"recent-file-path\">$REL_PATH</div>" >> $GITHUB_OUTPUT
+            echo "  <div class=\"recent-file-date\">$DATE</div>" >> $GITHUB_OUTPUT
+            echo "</div>" >> $GITHUB_OUTPUT
+          done
+          
           echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "Markdown files: $MD_COUNT"
         
       - name: Build search page
         run: |
           mkdir -p dist
-          UPDATE_TIME=$(TZ='Asia/Shanghai' date "+%Y-%m-%d %H:%M:%S CST")
-
+          
+          # 获取当前时间作为更新时间
+          UPDATE_TIME=$(date -u "+%Y-%m-%d %H:%M:%S UTC")
+          
           cat > dist/index.html << HTML_EOF
           <!DOCTYPE html>
           <html lang="zh-CN">
@@ -113,11 +130,21 @@ jobs:
                       margin-bottom: 25px;
                       border-left: 4px solid #667eea;
                   }
+                  .stats-card h3 {
+                      color: #333;
+                      margin-bottom: 15px;
+                      font-size: 1.2em;
+                      font-weight: 600;
+                  }
                   .stats-number {
                       font-size: 2.5em;
                       font-weight: 700;
                       color: #667eea;
                       margin-bottom: 5px;
+                  }
+                  .stats-label {
+                      color: #666;
+                      font-size: 14px;
                   }
                   .recent-files {
                       background: #f8f9fa;
@@ -125,10 +152,21 @@ jobs:
                       border-radius: 12px;
                       border-left: 4px solid #28a745;
                   }
+                  .recent-files h3 {
+                      color: #333;
+                      margin-bottom: 15px;
+                      font-size: 1.2em;
+                      font-weight: 600;
+                  }
                   .recent-file-item {
                       margin-bottom: 12px;
                       padding-bottom: 12px;
                       border-bottom: 1px solid #e1e8ed;
+                  }
+                  .recent-file-item:last-child {
+                      margin-bottom: 0;
+                      padding-bottom: 0;
+                      border-bottom: none;
                   }
                   .recent-file-name {
                       font-weight: 500;
@@ -141,11 +179,28 @@ jobs:
                   .recent-file-name:hover {
                       color: #667eea;
                   }
+                  .recent-file-path {
+                      color: #666;
+                      font-size: 12px;
+                      font-family: 'Monaco', 'Courier New', monospace;
+                      margin-bottom: 4px;
+                  }
+                  .recent-file-date {
+                      color: #28a745;
+                      font-size: 11px;
+                      font-weight: 500;
+                  }
                   h1 {
                       color: #333;
                       margin-bottom: 15px;
                       font-size: 2.8em;
                       font-weight: 700;
+                  }
+                  .subtitle {
+                      color: #666;
+                      margin-bottom: 40px;
+                      font-size: 1.2em;
+                      line-height: 1.5;
                   }
                   .search-container {
                       position: relative;
@@ -180,17 +235,116 @@ jobs:
                       display: flex;
                       align-items: center;
                       justify-content: center;
+                      transition: all 0.3s ease;
+                  }
+                  .search-btn:hover {
+                      transform: translateY(-50%) scale(1.1);
+                      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+                  }
+                  .search-btn svg {
+                      width: 22px;
+                      height: 22px;
+                      fill: white;
+                  }
+                  .quick-links {
+                      margin-top: 40px;
+                      padding-top: 35px;
+                      border-top: 2px solid #e1e8ed;
+                  }
+                  .quick-links h3 {
+                      color: #333;
+                      margin-bottom: 20px;
+                      font-size: 1.3em;
+                      font-weight: 600;
+                  }
+                  .link-buttons {
+                      display: flex;
+                      gap: 12px;
+                      flex-wrap: wrap;
+                      justify-content: center;
+                  }
+                  .link-btn {
+                      padding: 10px 18px;
+                      background: #f8f9fa;
+                      border: 2px solid #e1e8ed;
+                      border-radius: 25px;
+                      text-decoration: none;
+                      color: #333;
+                      font-size: 14px;
+                      font-weight: 500;
+                      transition: all 0.3s ease;
+                  }
+                  .link-btn:hover {
+                      background: #667eea;
+                      color: white;
+                      border-color: #667eea;
+                      transform: translateY(-2px);
+                  }
+                  .search-tips {
+                      margin-top: 30px;
+                      padding: 20px;
+                      background: #f8f9fa;
+                      border-radius: 12px;
+                      border-left: 4px solid #667eea;
+                  }
+                  .search-tips h4 {
+                      color: #333;
+                      margin-bottom: 10px;
+                      font-size: 1.1em;
+                  }
+                  .search-tips ul {
+                      list-style: none;
+                      text-align: left;
+                      color: #666;
+                      font-size: 14px;
+                  }
+                  .search-tips li {
+                      margin-bottom: 5px;
+                      padding-left: 20px;
+                      position: relative;
+                  }
+                  .search-tips li:before {
+                      content: "•";
+                      color: #667eea;
+                      position: absolute;
+                      left: 0;
+                      font-weight: bold;
+                  }
+                  .update-info {
+                      position: fixed;
+                      bottom: 10px;
+                      right: 10px;
+                      color: rgba(255,255,255,0.7);
+                      font-size: 11px;
+                      background: rgba(0,0,0,0.3);
+                      padding: 5px 10px;
+                      border-radius: 5px;
+                  }
+                  @media (max-width: 768px) {
+                      .main-wrapper {
+                          flex-direction: column;
+                          align-items: center;
+                      }
+                      .sidebar {
+                          width: 100%;
+                          max-width: 400px;
+                      }
+                      .update-info {
+                          display: none;
+                      }
                   }
               </style>
           </head>
           <body>
               <div class="main-wrapper">
+                  <!-- 左侧信息面板 -->
                   <div class="sidebar">
                       <div class="stats-card">
                           <h3>📊 仓库统计</h3>
                           <div class="stats-number">${{ steps.stats.outputs.md_count }}</div>
                           <div class="stats-label">Markdown 文件</div>
                       </div>
+                      
                       <div class="recent-files">
                           <h3>🕒 最近更新</h3>
                           <div id="recentFilesList">
@@ -198,14 +352,23 @@ jobs:
                           </div>
                       </div>
                   </div>
-
+                  
+                  <!-- 右侧主要内容 -->
                   <div class="container">
                       <h1>📚 GLM Blogs</h1>
-                      <p class="subtitle">在 GitHub 仓库中搜索技术博客内容</p>
-
+                      <p class="subtitle">在GitHub仓库中搜索Golemon的技术博客文件</p>
+                      
                       <form id="searchForm" onsubmit="performSearch(event)">
                           <div class="search-container">
-                              <input type="text" class="search-box" placeholder="输入搜索关键词..." id="searchInput" name="q" autocomplete="off" required>
+                              <input 
+                                  type="text" 
+                                  class="search-box" 
+                                  placeholder="输入搜索关键词..." 
+                                  id="searchInput"
+                                  name="q"
+                                  autocomplete="off"
+                                  required
+                              >
                               <button type="submit" class="search-btn">
                                   <svg viewBox="0 0 24 24">
                                       <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
@@ -213,30 +376,72 @@ jobs:
                               </button>
                           </div>
                       </form>
+                      
+                      <div class="quick-links">
+                          <h3>快速访问</h3>
+                          <div class="link-buttons">
+                              <a href="https://github.com/golitter" class="link-btn" target="_blank">👤 GitHub主页</a>
+                              <a href="https://github.com/golitter/glm-blogs" class="link-btn" target="_blank">🏠 仓库首页</a>
+                              <a href="https://github.com/golitter/glm-blogs/commits/master/" class="link-btn" target="_blank">📝 提交历史</a>
+                              <a href="https://github.com/golitter/glm-blogs/issues" class="link-btn" target="_blank">🐛 Issues</a>
+                              <a href="https://github.com/golitter/glm-blogs/pulls" class="link-btn" target="_blank">🔄 Pull Requests</a>
+                          </div>
+                      </div>
+                      
+                      <div class="search-tips">
+                          <h4>💡 搜索技巧</h4>
+                          <ul>
+                              <li>直接输入关键词搜索文件内容</li>
+                              <li>支持空格分隔多个关键词</li>
+                              <li>搜索结果将在新标签页中打开</li>
+                          </ul>
+                      </div>
                   </div>
               </div>
-
-              <div class="update-info">更新时间: $UPDATE_TIME</div>
+              
+              <div class="update-info">
+                  更新时间: $UPDATE_TIME
+              </div>
 
               <script>
+                  // 执行搜索
                   function performSearch(event) {
                       event.preventDefault();
+                      
                       const query = document.getElementById('searchInput').value.trim();
-                      if (!query) return;
-
+                      
+                      if (!query) {
+                          return;
+                      }
+                      
+                      // 构建GitHub搜索URL
+                      const baseUrl = 'https://github.com/search';
                       const repoQuery = 'repo:golitter/glm-blogs ' + query;
-                      const searchUrl = 'https://github.com/search?q=' + encodeURIComponent(repoQuery) + '&type=code';
+                      const searchUrl = baseUrl + '?q=' + encodeURIComponent(repoQuery) + '&type=code';
+                      
+                      // 在新标签页打开搜索结果
                       window.open(searchUrl, '_blank');
                   }
-
+                  
+                  // 页面加载完成后聚焦搜索框
                   window.addEventListener('load', () => {
                       document.getElementById('searchInput').focus();
+                  });
+                  
+                  // 添加键盘快捷键
+                  document.addEventListener('keydown', (e) => {
+                      // Ctrl/Cmd + K 聚焦搜索框
+                      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                          e.preventDefault();
+                          document.getElementById('searchInput').focus();
+                          document.getElementById('searchInput').select();
+                      }
                   });
               </script>
           </body>
           </html>
           HTML_EOF
-
+          
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
