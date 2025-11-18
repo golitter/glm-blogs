@@ -6,13 +6,13 @@ on:
     paths:
       - '**.md'
       - '.github/workflows/search.yml'
-      - 'templates/**'
+      - 'index.html'  # 修改这里
   pull_request:
     branches: [ main, master ]
     paths:
       - '**.md'
       - '.github/workflows/search.yml'
-      - 'templates/**'
+      - 'index.html'  # 修改这里
   workflow_dispatch:
   schedule:
     # 每天北京时间上午9点（UTC时间1点）自动更新一次
@@ -49,7 +49,7 @@ jobs:
           MD_COUNT=$(find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" | wc -l)
           echo "md_count=$MD_COUNT" >> $GITHUB_OUTPUT
           
-          # 使用git log获取最近提交的文件 - 更准确的方法
+          # 使用git log获取最近提交的文件
           echo "Getting recent files using git log..."
           
           # 生成最近文件HTML
@@ -100,7 +100,8 @@ jobs:
           done
           
           # 如果git log方法没有获取到足够的文件，使用备用方法
-          if [[ $(grep -c "recent-file-item" <<< "${{ steps.stats.outputs.recent_files_html }}" || echo "0") -lt 3 ]]; then
+          RECENT_FILES_COUNT=$(grep -c "recent-file-item" <<< "$(cat $GITHUB_OUTPUT | sed -n '/recent_files_html<<EOF/,/EOF/p' | grep -v 'recent_files_html<<EOF' | grep -v 'EOF')" || echo "0")
+          if [[ $RECENT_FILES_COUNT -lt 3 ]]; then
             echo "Using fallback method..."
             echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
             
@@ -136,6 +137,12 @@ jobs:
           
           # 获取当前中国时间作为更新时间
           UPDATE_TIME=$(TZ='Asia/Shanghai' date "+%Y-%m-%d %H:%M:%S")
+          
+          # 检查模板文件是否存在
+          if [[ ! -f "index.html" ]]; then
+            echo "Error: index.html template file not found!"
+            exit 1
+          fi
           
           # 使用envsubst替换模板中的变量
           export MD_COUNT="${{ steps.stats.outputs.md_count }}"
