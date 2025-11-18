@@ -181,7 +181,7 @@ jobs:
           <body>
               <div class="container">
                   <h1>📚 GLM Blogs</h1>
-                  <p class="subtitle">在GitHub仓库中搜索你的技术博客文件</p>
+                  <p class="subtitle">在GitHub仓库中搜索Golemon的技术博客文件</p>
                   
                   <form id="searchForm" onsubmit="performSearch(event)">
                       <div class="search-container">
@@ -205,8 +205,9 @@ jobs:
                   <div class="quick-links">
                       <h3>快速访问</h3>
                       <div class="link-buttons">
+                          <a href="https://github.com/golitter" class="link-btn" target="_blank">👤 GitHub主页</a>
                           <a href="https://github.com/golitter/glm-blogs" class="link-btn" target="_blank">🏠 仓库首页</a>
-                          <a href="https://github.com/golitter/glm-blogs/commits/main" class="link-btn" target="_blank">📝 提交历史</a>
+                          <a href="https://github.com/golitter/glm-blogs/commits/master/" class="link-btn" target="_blank">📝 提交历史</a>
                           <a href="https://github.com/golitter/glm-blogs/issues" class="link-btn" target="_blank">🐛 Issues</a>
                           <a href="https://github.com/golitter/glm-blogs/pulls" class="link-btn" target="_blank">🔄 Pull Requests</a>
                       </div>
