@@ -32,7 +32,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: full
+          fetch-depth: 0  # 获取完整历史记录
         
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -47,34 +47,48 @@ jobs:
           MD_COUNT=$(find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" | wc -l)
           echo "md_count=$MD_COUNT" >> $GITHUB_OUTPUT
           
-          # 使用git log获取最近提交的文件 - 更准确的方法
-          echo "Getting recent files using git log..."
+          echo "Getting recently modified files..."
           
           # 生成最近文件HTML
           echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
           
-          # 获取最近10次提交中涉及的md文件，按提交时间排序
-          git log --name-only --pretty=format:"%ct|%H" -20 -- "*.md" | \
+          # 方法1：使用git log获取所有修改过的md文件（包括更新、新增等）
+          # 获取最近30次提交中涉及的所有md文件，按最新修改时间排序
+          git log --since="30 days ago" --name-only --pretty=format:"%ct|%H|%s" -- "*.md" | \
           awk '
           BEGIN { 
             count = 0; 
             current_time = "";
             current_hash = "";
+            current_msg = "";
           }
           /^[0-9]+\|/ { 
             split($0, parts, "|");
             current_time = parts[1]; 
             current_hash = parts[2];
+            current_msg = parts[3];
             next;
           }
-          /^[^0-9]/ { 
-            if (current_time != "" && $0 ~ /\.md$/ && !seen[$0]++) {
-              print current_time "|" current_hash "|" $0;
-              count++;
-              if (count >= 5) exit;
+          /^[^0-9]/ && NF > 0 { 
+            # 跳过空行
+            if (current_time != "" && $0 ~ /\.md$/ && !/^\s*$/) {
+              # 记录文件及其最新的修改时间和提交信息
+              if (!file_time[$0] || current_time > file_time[$0]) {
+                file_time[$0] = current_time;
+                file_hash[$0] = current_hash;
+                file_msg[$0] = current_msg;
+              }
             }
           }
-          ' | sort -nr | while IFS='|' read -r timestamp commit_hash filepath; do
+          END {
+            # 按修改时间排序并输出前5个
+            n = asorti(file_time, sorted_files, "@val_num_desc");
+            for (i = 1; i <= (n > 5 ? 5 : n); i++) {
+              file = sorted_files[i];
+              print file_time[file] "|" file_hash[file] "|" file "|" file_msg[file];
+            }
+          }
+          ' | while IFS='|' read -r timestamp commit_hash filepath commit_msg; do
             
             if [[ -n "$filepath" && -f "$filepath" ]]; then
               # 转换时间戳为中国时间格式
@@ -83,27 +97,29 @@ jobs:
               REL_PATH=${filepath#./}
               # 获取文件名
               FILENAME=$(basename "$filepath")
-              # 构建GitHub URL - 使用master分支
+              # 构建GitHub URL
               GITHUB_URL="https://github.com/golitter/glm-blogs/blob/master/$REL_PATH"
               
-              # 生成HTML
+              # 生成HTML，添加文件修改提示
               echo "<div class=\"recent-file-item\">" >> $GITHUB_OUTPUT
               echo "  <div class=\"recent-file-name\" onclick=\"window.open('$GITHUB_URL', '_blank')\">$FILENAME</div>" >> $GITHUB_OUTPUT
               echo "  <div class=\"recent-file-path\">$REL_PATH</div>" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-date\">$DATE</div>" >> $GITHUB_OUTPUT
+              echo "  <div class=\"recent-file-date\">📝 $DATE</div>" >> $GITHUB_OUTPUT
               echo "</div>" >> $GITHUB_OUTPUT
               
-              echo "Added: $FILENAME ($DATE)"
+              echo "Added: $FILENAME (Modified: $DATE)"
             fi
           done
           
-          # 如果git log方法没有获取到足够的文件，使用备用方法
-          if [[ $(grep -c "recent-file-item" <<< "${{ steps.stats.outputs.recent_files_html }}" || echo "0") -lt 3 ]]; then
-            echo "Using fallback method..."
+          # 检查是否获取到足够的文件，如果不够则使用备用方法
+          FILE_COUNT=$(grep -c "recent-file-item" <<< "$(cat $GITHUB_OUTPUT | grep -A1000 'recent_files_html<<EOF' | grep -B1000 '^EOF$' | grep 'recent-file-item' || echo '')")
+          
+          if [[ $FILE_COUNT -lt 3 ]]; then
+            echo "Using fallback method - getting files by last modification time..."
             echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
             
-            # 备用方法：按文件名排序
-            find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" -exec stat -c "%Y %n" {} \; | \
+            # 备用方法：使用find和stat获取最近修改的文件
+            find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" -type f -exec stat -c "%Y %n" {} \; | \
             sort -k1 -nr | head -5 | while read timestamp filepath; do
               
               # 转换时间戳为中国时间格式
@@ -112,21 +128,24 @@ jobs:
               REL_PATH=${filepath#./}
               # 获取文件名
               FILENAME=$(basename "$filepath")
-              # 构建GitHub URL - 使用master分支
+              # 构建GitHub URL
               GITHUB_URL="https://github.com/golitter/glm-blogs/blob/master/$REL_PATH"
               
               # 生成HTML
               echo "<div class=\"recent-file-item\">" >> $GITHUB_OUTPUT
               echo "  <div class=\"recent-file-name\" onclick=\"window.open('$GITHUB_URL', '_blank')\">$FILENAME</div>" >> $GITHUB_OUTPUT
               echo "  <div class=\"recent-file-path\">$REL_PATH</div>" >> $GITHUB_OUTPUT
-              echo "  <div class=\"recent-file-date\">$DATE</div>" >> $GITHUB_OUTPUT
+              echo "  <div class=\"recent-file-date\">📁 $DATE</div>" >> $GITHUB_OUTPUT
               echo "</div>" >> $GITHUB_OUTPUT
+              
+              echo "Fallback added: $FILENAME ($DATE)"
             done
           fi
           
           echo "EOF" >> $GITHUB_OUTPUT
           
-          echo "Markdown files: $MD_COUNT"
+          echo "Total Markdown files: $MD_COUNT"
+          echo "Recent files count: $FILE_COUNT"
         
       - name: Build search page
         run: |
@@ -447,6 +466,7 @@ jobs:
                               <li>直接输入关键词搜索文件内容</li>
                               <li>支持空格分隔多个关键词</li>
                               <li>搜索结果将在新标签页中打开</li>
+                              <li>最近更新包含文件修改和新上传</li>
                           </ul>
                       </div>
                   </div>
