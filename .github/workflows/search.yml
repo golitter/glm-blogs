@@ -47,13 +47,10 @@ jobs:
           MD_COUNT=$(find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" | wc -l)
           echo "md_count=$MD_COUNT" >> $GITHUB_OUTPUT
           
-          # 使用git log获取最近提交的文件 - 更准确的方法
-          echo "Getting recent files using git log..."
-          
           # 生成最近文件HTML
           echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
           
-          # 获取最近10次提交中涉及的md文件，按提交时间排序
+          # 使用git log获取最近提交的文件
           git log --name-only --pretty=format:"%ct|%H" -20 -- "*.md" | \
           awk '
           BEGIN { 
