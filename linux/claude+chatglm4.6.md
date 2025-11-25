@@ -73,3 +73,19 @@ npm exec claude
 
 
 目前使用没有遇到权限问题（
+
+
+
+## error
+
+1. ```Error: Claude Code process exited with code 1```
+
+   vscode的claude登录显示上面内容，使用`npx claude`进行终端登录，发现是文件监听器数量限制。
+
+   临时增加：
+
+   ```shell
+   echo 524288 | sudo tee /proc/sys/fs/inotify/max_user_watches
+   ```
+
+   
