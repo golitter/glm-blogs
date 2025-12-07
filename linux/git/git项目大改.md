@@ -27,6 +27,14 @@ git rebase origin/master
 git push --force-with-lease origin refactor/major-del-mcp
 ```
 
+在删除新分支之前，需要合并到main分支：
+
+```shell
+git checkout master
+git merge refactor/major-del-mcp
+# git push
+```
+
 
 
 删除远程分支：
