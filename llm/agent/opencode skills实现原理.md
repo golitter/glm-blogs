@@ -23,3 +23,9 @@ tool-use中的`skills`工具的描述里面就是所有的`skill`名字和简要
 
 
 在claude code中，`skills`可以通过`/skill-name`来显式调用。
+
+
+
+## skill 的实践策略
+
+https://mp.weixin.qq.com/s/aoNwyY5ZkCRMkZirn1rElQ
