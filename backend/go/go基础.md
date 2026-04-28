@@ -204,3 +204,45 @@ Continue break
 切割数组的格式为`arr[startIndex:endIndex]`，切割的区间为**左闭右开**。且数组在切割后，就会变为切片类型。
 
 若要将数组转换为切片类型，不带参数进行切片即可，转换后的切片与原数组指向的是同一片内存，修改切片会导致原数组内容的变化。
+
+## 切片
+
+```go
+nums := []int{1,2}
+nums := make([]int, 0, 0) // 类型 长度 容量
+// len(nums) cap(nums)
+
+// 追加
+nums = append(nums, 1,2)
+// 头部添加
+nums = append([]int{1,2}, nums...)
+
+// 从中间下标 i 插入元素
+nums = append(nums[:i+1], append([]int{999, 999}, nums[i+1:]...)...)
+
+
+// 删除 前面n个
+nums = nums[n:]
+// 尾部nge
+nums = nums[: len(nums) - n]
+
+// 删除所有
+nums = nums[:0]
+```
+
+1.2版本 **扩展表达式**
+
+```shell
+slice[low:high:max]
+```
+
+使用扩展表达式的切片容量为`max-low`。
+
+```go
+	nums := []int{1, 2, 3, 4, 5}
+	nums = append([]int{0}, nums...)
+	fmt.Println(nums, cap(nums)) // 6
+	nums2 := nums[1:4]
+	fmt.Println(nums2, cap(nums2)) // 5
+```
+
