@@ -246,3 +246,237 @@ slice[low:high:max]
 	fmt.Println(nums2, cap(nums2)) // 5
 ```
 
+
+
+## 字符串
+
+不可变、只读的字节序列。
+
+```go
+s := "abc"
+// s[0] 是byte，打印出来是字节序列（数字，不是'a')
+bytes := []byte(s) // 字符串转字节切片
+bytes = append(bytes, 96, 97, 98)
+s2 := string(bytes) // 序列切片转字符串
+```
+
+字符串的长度，其实并不是字符的个数，而是字节序列的长度。
+
+ascii码是一个字符一个字节。如果是中文则不同，文字占三个字节。
+
+```go
+	s := "abc"
+	s2 := "你好啊"
+	fmt.Printf("s: %s, s2: %s\n", s, s2)
+	fmt.Printf("s: %d, s2: %d\n", len(s), len(s2)) // 3 9
+```
+
+默认for遍历是字节，for range遍历是utf8（可以遍历正确的中文字符）
+
+使用`[]rune()`可以转为utf8格式，此时支持中文字符。
+
+```go
+func main() {
+   str := "hello 世界!"
+   runes := []rune(str)
+   for i := 0; i < len(runes); i++ {
+      fmt.Println(string(runes[i]))
+   }
+}
+```
+
+
+
+## 映射表
+
+map的key必须是可比较的。
+
+```go
+	mp := map[int]string {
+		1: "one",
+		2: "two",
+		3: "three",
+	}
+	mp2 := make(map[int]string, 8) // 类型，初始容量
+```
+
+maps是引用类型，零值或者未初始化可以访问，但是无法存放元素。
+
+
+
+`mp[val]` 返回两个值，`value, status`，其中`status`是布尔值，代表键是否存在。
+
+```go
+val, exist := mp[3333]
+	if exist {
+		fmt.Println(val)
+	} else {
+		fmt.Println("不存在")
+	}
+```
+
+
+
+## 指针
+
+跟c语言类似，`&`取地址，`*`解地址。
+
+```go
+	s := 3
+	s_ptr := &s
+	fmt.Println(s_ptr)
+	fmt.Println(*s_ptr)
+
+// 声明
+var s *int // s是int型指针
+// 或者
+s := new(int) // 其中，new(TYPE)
+
+```
+
+
+
+## 函数
+
+```shell
+func 函数名([参数列表]) [返回值] {
+  函数体
+}
+```
+
+```go
+func main() { // main函数，程序入口
+	a := 3
+	b := 4
+	fmt.Printf("Sum of %d and %d is %d\n", a, b, Sum(a, b))
+}
+func Sum(a int, b int) int {
+	return a + b
+}
+```
+
+**明确禁止函数重载**。
+
+想通类型时，声明类型可以只写一个。
+
+使用变长参数`...`接收不定长参数必须**放到参数列表最后**。
+
+**都是值传递**。不过不会消耗大量内存，底层结构本身就包含指针。
+
+多返回值。
+
+```go
+func main() { // main函数，程序入口
+	a := 3
+	b := 4
+	result, err := Sum(a, b)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Printf("The sum of %d and %d is %d\n", a, b, result)
+}
+func Sum(a int, b int) (int, error) {
+	return a + b, nil
+}
+```
+
+具名返回值，return可以不写哪个变量。**return后面的优先级更高**。
+
+```go
+func main() { // main函数，程序入口
+	a := 3
+	b := 4
+	result, err := Sum(a, b)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	fmt.Printf("The sum of %d and %d is %d\n", a, b, result)
+}
+func Sum(a int, b int) (answer int, err error) {
+	answer, err = a + b, nil
+	return
+}
+```
+
+匿名函数，没有签名
+
+```go
+func main() {
+	s := func(a, b int) int {
+		return a + b
+	}(3, 4)
+	fmt.Println(s)
+}
+```
+
+
+
+## 结构体
+
+
+
+## 方法
+
+方法拥有接受者，函数无。同时方法只有自定义类型能够拥有方法。
+
+
+
+```go
+package main // 当前go文件是哪个包的，入口文件必须是main包
+
+import ( // 导入包
+	"fmt"
+)
+type ADT []int
+func (i ADT) Len() int {
+	return len(i)
+}
+func (i ADT) Get(index int) (int, error) {
+	lgh := i.Len()
+	if index < 0 || index >= lgh {
+		return 0, fmt.Errorf("index out of bounds")
+	}
+	return i[index], nil
+}
+
+func main() {
+	s := []int{1, 2, 3} // 定义一个切片，包含三个整数
+	adt := ADT(s) // 将切片转换为ADT类型
+	fmt.Println("Length of ADT:", adt.Len()) // 输出ADT的长度
+	value, err := adt.Get(133) // 获取索引为1的元素
+	if err != nil {
+		fmt.Println("Error:", err) // 如果发生错误，输出错误信息
+	} else {
+		fmt.Println("Value at index 1:", value) // 输出索引为1的元素值
+	}
+}
+```
+
+
+
+接受者，分为值接受者和指针接受者，其中**值接受者类似于形参**。
+
+ 如果是指针接受者，那么按照值的操作执行，go回将其转为指针
+
+```go
+ype MyInt int
+
+func (i MyInt) Set(val int) {
+   i = MyInt(val)
+}
+
+func main() {
+   myInt := MyInt(1)
+   myInt.Set(2) // 指针接受者，但是go将值转为指针了！
+   fmt.Println(myInt)
+}
+```
+
+
+
+## 接口
+
+接口是一种抽象类型，用于定义一组方法签名而不提供方法的实现。
+
