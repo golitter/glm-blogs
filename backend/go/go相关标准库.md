@@ -4,7 +4,7 @@
 > 因为小写字母开头的字段在 Go 中是私有的，外部的包（包括 `encoding/json` 等）无法读取和修改它们。
 
 - `Marshal`：序列化，将go对象转为json字符串
-- `UnMarshal`：反序列化，把json转为go对象
+- `UnMarshal`：    反序列化，把json转为go对象
 - `MarshalIndent`：带缩进的序列化，方便调试阅读
 
 ```go
