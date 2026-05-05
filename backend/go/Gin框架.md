@@ -231,3 +231,62 @@ node时压缩前缀树中对应的节点：
 
 > 因为公共前缀都被提到了父节点上，所以到了同一层级需要用 `indices` 做首字母索引时，**子节点的首字母绝对是唯一的**，不可能冲突。
 
+
+
+## Gin.Context
+
+gin.Context的定位是**对应于一次http请求，贯穿于整条handlersChain调用链路的上下文，其中包含了如下核心字段：
+
+- Request/Writer：http请求和响应的reader、writer入口
+- handlers：本次http请求对应的处理函数链
+- index：当前的处理进度，即处理链路处于函数链的索引位置
+- engine：Engine指针
+- mu：用于保护map的读写互斥锁
+- keys：缓存handlers链上共享数据的map
+
+## 复用策略
+
+为了缓解GC压力，gin中采用对象池s y n c.Pool进行Context的缓存复用，处理流程：
+
+1. http请求到达时，从pool中获取Context。如果池子里是空的，通过pool.New方法构造新的Context补上空缺
+2. http请求处理完成后，将Context放回pool中，进行复用
+
+> sync.Pool并非真正意义上的缓存（回收站？），放入的数据在逻辑上都是已经被删除的，但在物理意义上数据仍然存在，这些数据可以存活两轮GC时间，期间可以被复用。
+
+
+
+## 分配与回收机制
+
+gin.Context分配与回收的时机是在gin.Engine处理http请求的前后，位于Engine.ServeHTTP方法当中：
+
+1. 从Pool中获取Context
+2. 重置Context的内容，使其成为一个空白的上下文
+3. 调用Engine.handleHTTPRequest方法处理http请求
+4. 请求处理完成后，将Context放到Pool中
+
+## 使用时机
+
+在Engine.handleHTTPRequest方法处理请求时，会通过path从methodTree中获取到对应的handlers链，然后将handlers注入到Context.handlers中，启动Context.Next方法开启handlers链的遍历调用流程
+
+`Next()`方法内部维护了一个index，每调用一次，指针就往后移动一位，执行对应的handler。
+
+Gin框架将Context暴露给了用户，用户可以在自己的handler手动调用Next方法：
+
+```go
+func myHandleFunc(c *gin.Context){
+    // 【前处理】：在进入后续 handler 之前执行（例如：计时开始、鉴权前准备）
+    preHandle()  
+    
+    // 【切面】：手动拔动指针，执行后续的所有 handler (B, C, D...)
+    c.Next()
+    
+    // 【后处理】：后续 handler 全部执行完毕，随着函数栈出栈，回到这里执行（例如：计时结束、异常统一拦截）
+    postHandle() 
+}
+```
+
+
+
+如果中途发现错误，不想继续执行后续的handler，调用Abort方法将index赋值为63。当index为63时，回到Next循环调用时因为大于实际的链长所以循环直接终止。
+
+提供线程安全的 `map` 作为载体，解决链路上下游的**数据共享**问题。
