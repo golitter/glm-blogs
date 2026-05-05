@@ -31,3 +31,9 @@ https://github.com/Leonxlnx/taste-skill
 给AI编程助手装的“设计外挂”，能在写代码前自动生成行业专属的设计系统，让AI直接输出专业级UI。
 
 https://github.com/nextlevelbuilder/ui-ux-pro-max-skill
+
+
+
+### https://github.com/mattpocock/skills
+
+专门为 AI 编程助手（特别是 Claude）提供结构化的工程技能。
