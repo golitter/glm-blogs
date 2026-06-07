@@ -21,7 +21,7 @@ git remote add origin git@github.com:golitter/glm-blogs.git
 ```bash
 git add .
 git commit -m "init project"
-git push -u origin master
+git push -u origin main
 ```
 
 
