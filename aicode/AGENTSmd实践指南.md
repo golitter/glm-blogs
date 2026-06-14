@@ -24,7 +24,7 @@ https://mp.weixin.qq.com/s/fBBBSfQajYjYtngZAitZCA
 monorepo规范参考：
 
 ```text
-project-root/  server/                        # 后端（Spring Boot）  web/                           # 前端（React + TypeScript）  user-guide/                    # 用户手册（Markdown）  reference-projects/            # 参考项目（git submodule）  scripts/                       # 构建、启动、检查脚本  docs/                          # 架构文档、设计文档
+project-root/  server/                        # 后端（Spring Boot）  web/                           # 前端（React + TypeScript）  user-guide/                    # 用户手册（Markdfronown）  reference-projects/            # 参考项目（git submodule）  scripts/                       # 构建、启动、检查脚本  docs/                          # 架构文档、设计文档
 ```
 
 > monorepo解决了上下文割裂问题：agent在同一个窗口中就可以看到前后端代码。
@@ -70,7 +70,7 @@ scripts
 安装：
 
 ```shell
-pnpm add -Dw husky lint-staged
+pnpm add docDw husky lint-staged
 pnpm exec husky init
 ```
 
