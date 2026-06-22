@@ -674,60 +674,56 @@ v2 := S2{}; v3 = v2             // S2↔S3 可隐式（S2 无名）
 
 # 方法
 
-方法拥有接受者，函数无。同时方法只有自定义类型能够拥有方法。
-
-
+方法拥有接收者（receiver），函数无。方法本质是**带接收者的函数**，接收者可理解为一个特殊参数：`book.Pages()` 等价于 `Pages(book)`。
 
 ```go
-package main // 当前go文件是哪个包的，入口文件必须是main包
+func (接收者变量 接收者类型) 方法名(参数列表) 返回值 {
+    方法体
+}
+```
 
-import ( // 导入包
-	"fmt"
-)
-type ADT []int
+> 方法只能定义在**当前包的自定义类型**上，不能给内置类型（`int`）或其它包的类型直接定义方法。也不只限于结构体，任何自定义类型都行：
+
+```go
+type ADT []int          // 给切片类型定义方法
 func (i ADT) Len() int {
-	return len(i)
-}
-func (i ADT) Get(index int) (int, error) {
-	lgh := i.Len()
-	if index < 0 || index >= lgh {
-		return 0, fmt.Errorf("index out of bounds")
-	}
-	return i[index], nil
+    return len(i)
 }
 
-func main() {
-	s := []int{1, 2, 3} // 定义一个切片，包含三个整数
-	adt := ADT(s) // 将切片转换为ADT类型
-	fmt.Println("Length of ADT:", adt.Len()) // 输出ADT的长度
-	value, err := adt.Get(133) // 获取索引为1的元素
-	if err != nil {
-		fmt.Println("Error:", err) // 如果发生错误，输出错误信息
-	} else {
-		fmt.Println("Value at index 1:", value) // 输出索引为1的元素值
-	}
+type Age int            // 基于整数的自定义类型也能有方法
+func (a Age) IsAdult() bool {
+    return a >= 18
 }
 ```
 
-
-
-接受者，分为值接受者和指针接受者，其中**值接受者类似于形参**。
-
- 如果是指针接受者，那么按照值的操作执行，go回将其转为指针
+接收者分为**值接收者**和**指针接收者**。值接收者类似形参，**操作副本**，方法内修改不影响原对象；指针接收者**操作原对象**，可修改。
 
 ```go
-ype MyInt int
+type Book struct{ pages int }
 
-func (i MyInt) Set(val int) {
-   i = MyInt(val)
-}
+func (b Book) Pages() int { return b.pages }   // 值接收者：只读
+
+func (b *Book) SetPages(p int) { b.pages = p } // 指针接收者：可改原对象
 
 func main() {
-   myInt := MyInt(1)
-   myInt.Set(2) // 指针接受者，但是go将值转为指针了！
-   fmt.Println(myInt)
+	book := Book{}
+	book.SetPages(100)     // ✓ 等价于 (&book).SetPages(100)
+	fmt.Println(book.Pages()) // 100
 }
 ```
+
+> Go 会自动取地址/解引用：值上调指针方法会自动 `(&x)`，指针上调值方法会自动 `(*p)`。
+
+**方法集**（影响接口实现，重要）：
+
+- `T` 的方法集：只有值接收者方法
+- `*T` 的方法集：值接收者方法 + 指针接收者方法
+
+**选择接收者的经验法则**：要修改原对象、类型较大（避免复制）、含 `sync.Mutex` 等不可复制字段 → 用指针接收者；只读且类型小 → 可用值接收者。一个类型的接收者风格尽量**统一**。
+
+> 新定义的类型不会自动继承原类型的方法：`type Age MyInt` 后，`Age` 不拥有 `MyInt` 的方法。方法可以作为值保存：`f := book.Pages`。
+
+> 指针类型（如 `type MyPtr *int`）**不能定义方法**：自动取址/解引用语法糖会让 `**T` 的解引用次数产生歧义，也破坏方法集规则。必须封装指针时用 struct 包装：`type MyWrapper struct{ ptr *int }`，再给 `*MyWrapper` 定义方法。
 
 
 
