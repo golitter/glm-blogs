@@ -729,5 +729,54 @@ func main() {
 
 # 接口
 
-接口是一种抽象类型，用于定义一组方法签名而不提供方法的实现。
+接口是一种抽象类型，用于定义一组方法签名而不提供方法的实现。一个类型只要**拥有接口要求的全部方法**，就**自动实现**该接口（隐式实现，无 `implements`）。
+
+```go
+type Aboutable interface {
+	About() string
+}
+
+type Book struct{}
+func (Book) About() string { return "Book" }  // Book 自动实现了 Aboutable
+```
+
+空接口 `interface{}` 没有任何方法要求，所有类型都实现它（Go 1.18+ 别名 `any`）。
+
+```go
+var x any
+x = 123
+x = "hello"
+```
+
+接口值内部保存两部分：**动态类型 + 动态值**。
+
+```go
+var x any = 123  // 动态类型 int，动态值 123
+```
+
+> 经典坑：`nil` 接口和「包裹 nil 的接口」不同。
+
+```go
+var x any
+fmt.Println(x == nil) // true
+
+var p *Book = nil
+var y any = p
+fmt.Println(y == nil) // false —— y 有动态类型 *Book，只是动态值为 nil
+```
+
+**类型断言**从接口取出具体类型，推荐带 `ok` 避免失败 panic：`v, ok := x.(T)`。判断类型用 **type switch**：
+
+```go
+switch v := x.(type) {
+case int:
+	fmt.Println("int", v)
+case string:
+	fmt.Println("string", v)
+default:
+	fmt.Println("unknown", v)
+}
+```
+
+> Go 1.18+ 接口还可作**泛型约束**：`type Unsigned interface{ uint | uint8 | ... }`，这种接口不一定能当普通变量类型用。
 
