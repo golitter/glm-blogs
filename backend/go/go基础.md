@@ -330,7 +330,7 @@ slice[low:high:max]
 
 # 字符串
 
-不可变、只读的字节序列。
+不可变、只读的字节序列。`s[i]` 取的是第 i 个**字节**（`byte`/`uint8`），不是字符。
 
 ```go
 s := "abc"
@@ -351,9 +351,11 @@ ascii码是一个字符一个字节。如果是中文则不同，文字占三个
 	fmt.Printf("s: %d, s2: %d\n", len(s), len(s2)) // 3 9
 ```
 
+> 修改字符串：先转 `[]byte`（ASCII）或 `[]rune`（含中文），改完再转回 `string`。
+
 默认for遍历是字节，for range遍历是utf8（可以遍历正确的中文字符）
 
-使用`[]rune()`可以转为utf8格式，此时支持中文字符。
+使用`[]rune()`可以转为utf8格式，此时支持中文字符。`rune` 是 `int32`，表示一个 Unicode 字符。
 
 ```go
 func main() {
@@ -364,6 +366,19 @@ func main() {
    }
 }
 ```
+
+> 按字符数取长度 / 中文安全截取，都要先转 `[]rune`：`len([]rune(s))`、`string(r[:2])`。
+
+字符串可以直接用 `==`、`<`、`>` 比较。拼接少量用 `+`；大量拼接用 `strings.Builder`。
+
+```go
+	var b strings.Builder
+	b.WriteString("hello")
+	b.WriteString(" world")
+	s := b.String()
+```
+
+原始字符串用反引号 `` `...` ``，**不能转义字符**，适合多行文本。
 
 
 
