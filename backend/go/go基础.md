@@ -247,6 +247,8 @@ Continue break
 
 ## 数组
 
+固定长度，长度是类型的一部分，`[3]int` 和 `[4]int` 是不同类型。**值类型**，赋值/传参会复制整个数组。
+
 ```go
 	const n = 3
 	var nums [n]int
@@ -279,6 +281,8 @@ Continue break
 
 ## 切片
 
+引用底层数组一段连续区域，底层结构 = `{指针, len, cap}`，长度可变。
+
 ```go
 nums := []int{1,2}
 nums := make([]int, 0, 0) // 类型 长度 容量
@@ -295,12 +299,16 @@ nums = append(nums[:i+1], append([]int{999, 999}, nums[i+1:]...)...)
 
 // 删除 前面n个
 nums = nums[n:]
-// 尾部nge
+// 尾部n个
 nums = nums[: len(nums) - n]
 
 // 删除所有
 nums = nums[:0]
 ```
+
+> 多个切片共享同一底层数组，截取只是视图，改一个会影响另一个。`copy(dst, src)` 可复制出独立切片。
+
+> 函数内 `append` 可能扩容换底层数组，需**返回新切片**。
 
 1.2版本 **扩展表达式**
 
@@ -361,7 +369,7 @@ func main() {
 
 # 映射表
 
-map的key必须是可比较的。
+map的key必须是可比较的。slice、map、function 不能做 key。
 
 ```go
 	mp := map[int]string {
@@ -374,7 +382,7 @@ map的key必须是可比较的。
 
 maps是引用类型，零值或者未初始化可以访问，但是无法存放元素。
 
-
+> `nil` map 写入会 panic，必须先 `make`。
 
 `mp[val]` 返回两个值，`value, status`，其中`status`是布尔值，代表键是否存在。
 
@@ -386,6 +394,8 @@ val, exist := mp[3333]
 		fmt.Println("不存在")
 	}
 ```
+
+`delete(m, key)` 删除元素，key 不存在不报错。遍历顺序**不固定**。
 
 
 
