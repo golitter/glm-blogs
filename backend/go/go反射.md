@@ -1,129 +1,148 @@
-[反射 | Golang 中文学习文档](https://golang.halfiisland.com/essential/senior/105.reflect.html)
+运行时检查类型和值的机制。go 中反射与 `interface{}` 密切相关（见 `interface{}` 多半有反射）。
 
-反射是一种在运行时检查语言自身结构的机制，它可以很灵活的去应对一些问题，但同时带来的弊端也很明显，例如性能问题等等。在go中，反射与`interface{}`密切相关（只要出现这个大概率有反射）
+> 在程序运行期间，动态获取变量的类型信息和内存结构，并能动态修改它的值。
 
-> 反射就是在程序运行期间，能够动态地获取一个变量的类型信息和内存结构，并且能够动态地修改它的值的能力。
+由 `reflect` 包提供，核心两个对象：
 
+- `reflect.Type`：类型信息，`reflect.TypeOf(x)` 获取
+- `reflect.Value`：值信息，`reflect.ValueOf(x)` 获取
 
+## 三大法则
 
-反射是由`reflect`包提供。
-
-
-
-在go中，接口本质上是结构体。go在运行时将接口分为了两大类：
-
-- 没有方法集的接口
-- 有方法集的接口
-
-对于有方法集的接口，运行时采用`iface`结构体表示；而无方法集的接口则用`eface`接口。
-
-这两个结构体在`reflect`包下对应的结构体：
+1. 接口值 → 反射对象（`TypeOf` / `ValueOf`）
+2. 反射对象 → 接口值（`Interface()`）
+3. 要修改反射对象，值必须可设置（`CanSet() == true`）
 
 ```go
-type nonEmptyInterface struct {
-  itab *struct {
-    ityp *rtype // 静态接口类型
-    typ  *rtype // 动态具体类型
-    hash uint32 // 类型哈希
-    _    [4]byte
-    fun  [100000]unsafe.Pointer // 方法集
-  }
-  word unsafe.Pointer // 指向值的指针
-}
-type emptyInterface struct {
-   typ  *rtype // 动态具体类型
-   word unsafe.Pointer // 指向指针的值
-}
+x := 6
+t := reflect.TypeOf(x)   // int
+v := reflect.ValueOf(x)  // 6
+
+y := v.Interface().(int) // 法则二：还原回接口值
 ```
 
-- `iface` -> `nonEmptyInterface`
-- `eface` -> `emptyInterface`
+## 修改值：必须传指针
 
-在`reflect`包下，有`reflect.Type`接口类型表示go中的类型，`reflect.Value`结构体类型表示go中的值。
-
-go中的所有反射相关的操作都是基于这两个类型。使用`TypeOf`和`ValueOf`来进行上述类型的转换。
-
-
-
-反射的核心：
-
-1. 反射可以将`interface{}`类型变量转换成反射对象
-2. 反射可以将反射对象还原成`interface{}`类型变量
-3. 要修改反射对象，其值必须是可以设置的
-
-
+`ValueOf` 拿到的是**副本**，改副本不影响原变量。想改原值：传指针 + `Elem()` 解引用。
 
 ```go
- func main() {
-  str := "hello world!"
-  reflectType := reflect.TypeOf(str)
-  fmt.Println(reflectType)
-}
+a := 5
+v := reflect.ValueOf(&a).Elem() // 传 &a，再 Elem()
+v.SetInt(10)
+fmt.Println(a) // 10
 ```
 
 ```go
-  // 定理一
-  x := 6
-  x_type := reflect.TypeOf(x)
-  x_value := reflect.ValueOf(x)
-  fmt.Printf("Type of x: %s\n", x_type)
-  fmt.Printf("Value of x: %d\n", x_value.Int())
-
-  // 定理二
-  x_reflect := x_value.Interface()
-  fmt.Printf("Value of x using Interface: %d\n", x_reflect.(int))
-  fmt.Println(reflect.TypeOf(x_reflect)) // int
+a := 5
+reflect.ValueOf(a).SetInt(10) // panic：副本不可设置
 ```
 
-`reflect.ValueOf`拿到的是**变量副本**，修改副本不会影响原变量。想要通过反射修改原变量，**必须传入指针**，并使用`Elem()`解引用拿到指向的值，同时需要保证值是可设置的`Canset()==true`。
+## Type 与 Kind
 
-```go
-  a := 5
-  a_ptr_reflect := reflect.ValueOf(&a)
-  a_elem := a_ptr_reflect.Elem()
-  fmt.Println(reflect.TypeOf(a_elem))
-
-  if a_elem.CanSet() {
-    a_elem.SetInt(10)
-  }
-  fmt.Println(a)
-```
-
-reflect中，`Kind`代表底层的大类，比如`int string`等。`Name`表示精确的类型名称，比如`MyInt`。
+- `Name()`：精确类型名，如 `MyInt`
+- `Kind()`：底层大类，如 `int`
 
 ```go
 type MyInt int
 var x MyInt = 10
 t := reflect.TypeOf(x)
-
-fmt.Println(t.Name()) // 输出: MyInt (精确类型名)
-fmt.Println(t.Kind()) // 输出: int   (底层种类)
+t.Name() // MyInt
+t.Kind() // int
 ```
 
+常见 Kind：`Int Float String Bool Struct Ptr Slice Map Array Func Chan Interface`。
 
+## %T vs reflect.TypeOf vs Kind
 
-## 遍历结构体的字段和标签
+三个都能「看类型」，但角度不同，容易混：
 
 ```go
-type AName struct {
-    Name string `json:"name" db:"user_name"`
-}
-type User struct {
-    Name AName `json:"na33me" db:"user_name"`
-    Age  int   `json:"age" db:"user_age"`
-}
+type MyInt int
+x := MyInt(123)
+v := reflect.ValueOf(x)
 
-u := User{AName{"Alice"}, 25}
-t := reflect.TypeOf(u)
-
-// 遍历结构体字段
-for i := 0; i < t.NumField(); i++ {
-    field := t.Field(i)
-    fmt.Printf("字段名: %s, 类型: %s, json标签: %s\n", 
-        field.Name, field.Type, field.Tag.Get("json"))
-}
-// 输出：
-// 字段名: Name, 类型: string, json标签: na33me
-// 字段名: Age, 类型: int, json标签: age
+fmt.Printf("%T\n", x)                 // main.MyInt  ← 静态类型
+fmt.Println(reflect.TypeOf(x))        // main.MyInt  ← 同上
+fmt.Println(reflect.TypeOf(x).Kind()) // int         ← 底层种类
+fmt.Println(v.Kind())                 // int         ← 底层种类
 ```
 
+| 方式 | 看到的是 | 回答的问题 |
+| ---- | ---- | ---- |
+| `%T` | 静态类型 | 这个变量是什么类型？ |
+| `reflect.TypeOf(x)` | 静态类型 | 同上 |
+| `Kind()` | 底层种类 | 它底层用什么内存结构存？ |
+
+> ⚠️ 把 `%T` 用在反射对象 `v` 上要小心：`%T` 打印的是变量本身的类型 `reflect.Value`，不是盒子里装的 `int`：
+
+```go
+v := reflect.ValueOf(123)
+fmt.Printf("%T\n", v)   // reflect.Value  ← 盒子本身
+fmt.Printf("%v\n", v)   // 123            ← 盒子里的值
+fmt.Println(v.Type())   // int            ← 盒子里东西的真实类型
+```
+
+一句话：`%T` 看「是什么类型」，`%v` 看「是什么值」；`%T` 告诉你 `v` 是「反射盒子」，`v.Type()` 才告诉你盒子里东西的真实类型。
+
+## 遍历结构体字段与 tag
+
+```go
+type User struct {
+	Name string `json:"name" db:"user_name"`
+	Age  int    `json:"age" db:"user_age"`
+}
+
+u := User{"Alice", 25}
+t := reflect.TypeOf(u)
+v := reflect.ValueOf(u)
+
+for i := 0; i < t.NumField(); i++ {
+	f := t.Field(i)
+	fmt.Printf("%s %s %v tag=%s\n", f.Name, f.Type, v.Field(i), f.Tag.Get("json"))
+}
+// Name string Alice tag=name
+// Age int 25 tag=age
+```
+
+- `t.Field(i)` / `v.Field(i)`：字段的元信息 / 值
+- `f.Tag.Get("json")`：读 tag
+- `t.FieldByName("Age")`：按名取
+
+改结构体字段同样要 `reflect.ValueOf(&u).Elem()`。**未导出字段 `CanSet()` 为 false，Set 会 panic**。
+
+## 调用方法
+
+```go
+v := reflect.ValueOf(dog)
+method := v.MethodByName("Say")
+out := method.Call([]reflect.Value{reflect.ValueOf("hi")}) // 参数也得是 Value
+```
+
+## 用在哪
+
+`fmt` 打印、`encoding/json` 编解码、ORM 映射字段、配置解析、依赖注入、RPC、validator——凡是处理「未知类型」的框架都靠它。
+
+## 代价
+
+- 性能比普通代码慢
+- 编译期类型检查变少，错误变成运行时 panic
+- 可读性差：`u.Name = "Bob"` vs `reflect.ValueOf(&u).Elem().FieldByName("Name").SetString("Bob")`
+
+常见 panic：对副本 Set、改未导出字段、类型不匹配的 Set、对 nil 取字段。防御：先判 `CanSet()` 和 `Kind()`。
+
+## 速查
+
+| 想做 | 代码 |
+| ---- | ---- |
+| 看类型 | `reflect.TypeOf(x)` |
+| 看值 | `reflect.ValueOf(x)` |
+| 还原接口 | `v.Interface()` |
+| 改原变量 | `reflect.ValueOf(&x).Elem()` |
+| 底层大类 | `t.Kind()` |
+| 精确类型名 | `t.Name()` |
+| 字段数 / 第 i 字段 | `t.NumField()` / `t.Field(i)` |
+| 读 tag | `f.Tag.Get("json")` |
+| 调方法 | `v.MethodByName("X").Call(args)` |
+| 是否可设置 | `v.CanSet()` |
+
+> **核心公式**：`reflect.TypeOf(x)` 看类型，`reflect.ValueOf(x)` 看值，想改就 `reflect.ValueOf(&x).Elem()`。
