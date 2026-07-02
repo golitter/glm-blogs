@@ -1,0 +1,582 @@
+name: Deploy Blog Page
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - '**.md'
+      - '.github/workflows/blog-page.yaml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - '**.md'
+      - '.github/workflows/blog-page.yaml'
+#   workflow_dispatch:
+#   schedule:
+#     # 每天北京时间上午9点（UTC时间1点）自动更新一次
+#     - cron: '0 1 * * *'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: full
+        
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        
+      - name: Get repository stats
+        id: stats
+        run: |
+          # 设置时区为中国东八区
+          export TZ='Asia/Shanghai'
+          
+          # 统计markdown文件数量
+          MD_COUNT=$(find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" | wc -l)
+          echo "md_count=$MD_COUNT" >> $GITHUB_OUTPUT
+          
+          # 生成最近文件HTML
+          echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
+          
+          # 禁用路径名的引号转义，确保中文路径显示正常
+          git config --global core.quotepath false
+          # 使用git log获取最近提交的文件
+          git log --name-only --pretty=format:"%ct|%H" -20 -- "*.md" | \
+          awk '
+          BEGIN { 
+            count = 0; 
+            current_time = "";
+            current_hash = "";
+          }
+          /^[0-9]+\|/ { 
+            split($0, parts, "|");
+            current_time = parts[1]; 
+            current_hash = parts[2];
+            next;
+          }
+          /^[^0-9]/ { 
+            if (current_time != "" && $0 ~ /\.md$/ && !seen[$0]++) {
+              print current_time "|" current_hash "|" $0;
+              count++;
+              if (count >= 5) exit;
+            }
+          }
+          ' | sort -nr | while IFS='|' read -r timestamp commit_hash filepath; do
+            
+            if [[ -n "$filepath" && -f "$filepath" ]]; then
+              # 转换时间戳为中国时间格式
+              DATE=$(TZ='Asia/Shanghai' date -d "@$timestamp" "+%Y-%m-%d %H:%M")
+              # 获取相对路径（去掉开头的./）
+              REL_PATH=${filepath#./}
+              # 获取文件名
+              FILENAME=$(basename "$filepath")
+              # 构建GitHub URL - 使用master分支
+              GITHUB_URL="https://github.com/golitter/glm-blogs/blob/master/$REL_PATH"
+              
+              # 生成HTML
+              echo "<a class=\"recent-file-item\" href=\"$GITHUB_URL\" target=\"_blank\" rel=\"noopener noreferrer\">" >> $GITHUB_OUTPUT
+              echo "  <span class=\"recent-file-name\">$FILENAME</span>" >> $GITHUB_OUTPUT
+              echo "  <span class=\"recent-file-path\">$REL_PATH</span>" >> $GITHUB_OUTPUT
+              echo "  <span class=\"recent-file-date\">$DATE</span>" >> $GITHUB_OUTPUT
+              echo "</a>" >> $GITHUB_OUTPUT
+              
+              echo "Added: $FILENAME ($DATE)"
+            fi
+          done
+          
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          echo "Markdown files: $MD_COUNT"
+        
+      - name: Build search page
+        run: |
+          mkdir -p dist
+          
+          # 获取当前中国时间作为更新时间
+          UPDATE_TIME=$(TZ='Asia/Shanghai' date "+%Y-%m-%d %H:%M:%S")
+          
+          cat > dist/index.html << HTML_EOF
+          <!DOCTYPE html>
+          <html lang="zh-CN">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>GLM Blogs</title>
+              <style>
+                  :root {
+                      --bg: #f8fbfd;
+                      --surface: #ffffff;
+                      --surface-soft: #f4f8fb;
+                      --text: #182132;
+                      --muted: #667287;
+                      --line: #d8e5ee;
+                      --blue: #4da9dc;
+                      --blue-dark: #276f98;
+                      --violet: #aa86cf;
+                      --gold: #bd873a;
+                  }
+                  * { margin: 0; padding: 0; box-sizing: border-box; }
+                  body {
+                      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                      color: var(--text);
+                      background: var(--bg);
+                      min-height: 100vh;
+                      font-size: 16px;
+                  }
+                  a { color: inherit; }
+                  .site-header {
+                      position: sticky;
+                      top: 0;
+                      z-index: 10;
+                      border-bottom: 1px solid var(--line);
+                      background: rgba(255, 255, 255, 0.92);
+                      backdrop-filter: blur(10px);
+                  }
+                  .nav {
+                      max-width: 1040px;
+                      width: 100%;
+                      margin: 0 auto;
+                      padding: 0 24px;
+                      min-height: 64px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: space-between;
+                      gap: 24px;
+                  }
+                  .brand {
+                      display: inline-flex;
+                      align-items: center;
+                      gap: 9px;
+                      text-decoration: none;
+                      font-weight: 700;
+                      letter-spacing: 0;
+                  }
+                  .brand-avatar {
+                      width: 28px;
+                      height: 28px;
+                      border-radius: 50%;
+                      object-fit: cover;
+                      border: 1px solid var(--line);
+                      background: var(--surface-soft);
+                  }
+                  .nav-links {
+                      display: flex;
+                      align-items: center;
+                      gap: 18px;
+                      color: var(--muted);
+                      font-size: 14px;
+                  }
+                  .nav-links a {
+                      text-decoration: none;
+                  }
+                  .nav-links a:hover {
+                      color: var(--blue-dark);
+                  }
+                  .page {
+                      max-width: 1040px;
+                      width: 100%;
+                      margin: 0 auto;
+                      padding: 34px 24px 44px;
+                  }
+                  .hero {
+                      display: grid;
+                      grid-template-columns: minmax(0, 1fr) auto;
+                      gap: 20px 28px;
+                      align-items: end;
+                      margin-bottom: 26px;
+                  }
+                  h1 {
+                      font-size: 34px;
+                      line-height: 1.18;
+                      font-weight: 760;
+                      letter-spacing: 0;
+                      margin-bottom: 10px;
+                  }
+                  .subtitle {
+                      color: var(--muted);
+                      font-size: 15px;
+                      line-height: 1.72;
+                  }
+                  .stats-inline {
+                      min-width: 132px;
+                      padding: 12px 14px;
+                      border: 1px solid var(--line);
+                      border-radius: 8px;
+                      background: var(--surface);
+                  }
+                  .stats-inline span {
+                      display: block;
+                      color: var(--muted);
+                      font-size: 12px;
+                  }
+                  .stats-inline strong {
+                      display: block;
+                      margin-top: 4px;
+                      color: var(--blue-dark);
+                      font-size: 28px;
+                      line-height: 1;
+                  }
+                  .search-panel {
+                      grid-column: 1 / -1;
+                      margin-top: 2px;
+                      border: 1px solid var(--line);
+                      border-radius: 8px;
+                      background: var(--surface);
+                      padding: 8px;
+                  }
+                  .search-container {
+                      position: relative;
+                      display: flex;
+                      align-items: center;
+                  }
+                  .search-box {
+                      width: 100%;
+                      height: 52px;
+                      padding: 0 58px 0 16px;
+                      color: var(--text);
+                      font-size: 16px;
+                      border: 1px solid transparent;
+                      border-radius: 6px;
+                      outline: none;
+                      background: var(--surface-soft);
+                      transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+                  }
+                  .search-box:focus {
+                      border-color: rgba(96, 183, 232, 0.92);
+                      background: #ffffff;
+                      box-shadow: 0 0 0 4px rgba(96, 183, 232, 0.16);
+                  }
+                  .search-box::placeholder {
+                      color: #8795a8;
+                  }
+                  .search-btn {
+                      position: absolute;
+                      right: 7px;
+                      top: 50%;
+                      transform: translateY(-50%);
+                      width: 38px;
+                      height: 38px;
+                      display: inline-flex;
+                      align-items: center;
+                      justify-content: center;
+                      border: 1px solid rgba(36, 121, 168, 0.18);
+                      border-radius: 6px;
+                      color: white;
+                      background: var(--blue-dark);
+                      cursor: pointer;
+                      transition: background 0.2s ease, transform 0.2s ease;
+                  }
+                  .search-btn:hover {
+                      background: #1d668e;
+                  }
+                  .search-btn:active {
+                      transform: translateY(-50%) scale(0.98);
+                  }
+                  .search-btn svg {
+                      width: 20px;
+                      height: 20px;
+                      fill: currentColor;
+                  }
+                  .content-grid {
+                      display: grid;
+                      grid-template-columns: 220px minmax(0, 1fr);
+                      gap: 24px;
+                      align-items: start;
+                  }
+                  .category-panel,
+                  .recent-panel {
+                      border: 1px solid var(--line);
+                      border-radius: 8px;
+                      background: var(--surface);
+                      padding: 18px;
+                  }
+                  .category-panel h2,
+                  .recent-panel h2 {
+                      margin-bottom: 14px;
+                      font-size: 16px;
+                      font-weight: 720;
+                      letter-spacing: 0;
+                  }
+                  .panel-title-link {
+                      display: inline-flex;
+                      align-items: center;
+                      gap: 6px;
+                      color: inherit;
+                      text-decoration: none;
+                  }
+                  .panel-title-link:hover {
+                      color: var(--blue-dark);
+                  }
+                  .category-list {
+                      display: grid;
+                      gap: 2px;
+                  }
+                  .category-link {
+                      display: block;
+                      padding: 9px 10px;
+                      border-radius: 6px;
+                      text-decoration: none;
+                  }
+                  .category-link:hover {
+                      background: var(--surface-soft);
+                      color: var(--blue-dark);
+                  }
+                  .category-link strong {
+                      display: block;
+                      font-size: 14px;
+                      font-weight: 680;
+                  }
+                  .category-link span {
+                      display: block;
+                      margin-top: 3px;
+                      color: var(--muted);
+                      font-size: 12px;
+                      line-height: 1.45;
+                  }
+                  .recent-file-item {
+                      display: block;
+                      padding: 14px 0;
+                      border-bottom: none;
+                      text-decoration: none;
+                  }
+                  .recent-file-item + .recent-file-item {
+                      border-top: 1px solid var(--line);
+                  }
+                  .recent-file-name,
+                  .recent-file-path,
+                  .recent-file-date {
+                      display: block;
+                  }
+                  .recent-file-name {
+                      color: var(--text);
+                      font-size: 15px;
+                      font-weight: 680;
+                      line-height: 1.45;
+                  }
+                  .recent-file-item:hover .recent-file-name {
+                      color: var(--blue-dark);
+                  }
+                  .recent-file-path {
+                      margin-top: 4px;
+                      color: var(--muted);
+                      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                      font-size: 12px;
+                      line-height: 1.45;
+                      word-break: break-all;
+                  }
+                  .recent-file-date {
+                      margin-top: 5px;
+                      color: var(--gold);
+                      font-size: 12px;
+                      font-weight: 650;
+                  }
+                  .update-info {
+                      max-width: 1040px;
+                      margin: 32px auto 0;
+                      padding: 0 24px 28px;
+                      color: var(--muted);
+                      font-size: 12px;
+                  }
+                  @media (max-width: 800px) {
+                      .nav {
+                          min-height: 58px;
+                      }
+                      .nav-links {
+                          gap: 12px;
+                          font-size: 13px;
+                      }
+                      .page {
+                          padding-top: 36px;
+                      }
+                      .content-grid {
+                          grid-template-columns: 1fr;
+                      }
+                      .hero {
+                          grid-template-columns: 1fr;
+                      }
+                      .stats-inline {
+                          justify-self: start;
+                      }
+                  }
+                  @media (max-width: 560px) {
+                      .nav {
+                          align-items: flex-start;
+                          flex-direction: column;
+                          gap: 8px;
+                          padding-top: 14px;
+                          padding-bottom: 14px;
+                      }
+                      .nav-links {
+                          flex-wrap: wrap;
+                      }
+                      h1 {
+                          font-size: 32px;
+                      }
+                      .subtitle {
+                          font-size: 16px;
+                      }
+                      .search-box {
+                          height: 54px;
+                          font-size: 16px;
+                      }
+                  }
+              </style>
+          </head>
+          <body>
+              <header class="site-header">
+                  <nav class="nav" aria-label="Primary">
+                      <a class="brand" href="https://golitter.github.io/glm-blogs/">
+                          <img class="brand-avatar" src="https://avatars.githubusercontent.com/u/98943296?s=400&amp;u=441bc3e34594681be870735c2b7c371586b572ba&amp;v=4" alt="">
+                          <span>GLM Blogs</span>
+                      </a>
+                      <div class="nav-links">
+                          <a href="https://github.com/golitter/glm-blogs" target="_blank" rel="noopener noreferrer">Repository</a>
+                          <a href="https://github.com/golitter/glm-blogs/commits/master/" target="_blank" rel="noopener noreferrer">Commits</a>
+                          <a href="https://github.com/golitter/glm-blogs/issues" target="_blank" rel="noopener noreferrer">Issues</a>
+                      </div>
+                  </nav>
+              </header>
+
+              <main class="page">
+                  <section class="hero">
+                      <div>
+                          <h1>技术博客</h1>
+                          <p class="subtitle">记录工程实践、后端开发、Linux、机器学习和日常开发问题。搜索会跳到 GitHub code search，方便继续筛选文件。</p>
+                      </div>
+                      <div class="stats-inline">
+                          <span>Markdown notes</span>
+                          <strong>${{ steps.stats.outputs.md_count }}</strong>
+                      </div>
+
+                      <form id="searchForm" onsubmit="performSearch(event)" class="search-panel">
+                          <div class="search-container">
+                              <input 
+                                  type="text" 
+                                  class="search-box" 
+                                  placeholder="搜索 Markdown 内容，例如 qwen、agent、docker"
+                                  id="searchInput"
+                                  name="q"
+                                  autocomplete="off"
+                                  required
+                              >
+                              <button type="submit" class="search-btn" aria-label="搜索">
+                                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                                      <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                                  </svg>
+                              </button>
+                          </div>
+                      </form>
+                  </section>
+
+                  <div class="content-grid">
+                      <aside class="category-panel" aria-labelledby="categories-title">
+                          <h2 id="categories-title">
+                              <a class="panel-title-link" href="https://github.com/golitter/glm-blogs" target="_blank" rel="noopener noreferrer">目录</a>
+                          </h2>
+                          <div class="category-list">
+                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/aicode" target="_blank" rel="noopener noreferrer">
+                                  <strong>aicode</strong>
+                                  <span>Codex、SDD、智能体工程</span>
+                              </a>
+                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/llm" target="_blank" rel="noopener noreferrer">
+                                  <strong>llm</strong>
+                                  <span>模型、Agent、RAG、微调</span>
+                              </a>
+                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/backend" target="_blank" rel="noopener noreferrer">
+                                  <strong>backend</strong>
+                                  <span>Go、MySQL、服务端基础</span>
+                              </a>
+                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/linux" target="_blank" rel="noopener noreferrer">
+                                  <strong>linux</strong>
+                                  <span>环境、Git、Docker、远程开发</span>
+                              </a>
+                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/ml" target="_blank" rel="noopener noreferrer">
+                                  <strong>ml</strong>
+                                  <span>机器学习和训练记录</span>
+                              </a>
+                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/others" target="_blank" rel="noopener noreferrer">
+                                  <strong>others</strong>
+                                  <span>资料、阅读和杂项</span>
+                              </a>
+                          </div>
+                      </aside>
+
+                      <section class="recent-panel" aria-labelledby="recent-title">
+                          <h2 id="recent-title">最近更新</h2>
+                          <div id="recentFilesList">
+                              ${{ steps.stats.outputs.recent_files_html }}
+                          </div>
+                      </section>
+                  </div>
+              </main>
+              
+              <div class="update-info">
+                  更新时间: $UPDATE_TIME (中国时间)
+              </div>
+
+              <script>
+                  // 执行搜索
+                  function performSearch(event) {
+                      event.preventDefault();
+                      
+                      const query = document.getElementById('searchInput').value.trim();
+                      
+                      if (!query) {
+                          return;
+                      }
+                      
+                      // 构建GitHub搜索URL
+                      const baseUrl = 'https://github.com/search';
+                      const repoQuery = 'repo:golitter/glm-blogs ' + query;
+                      const searchUrl = baseUrl + '?q=' + encodeURIComponent(repoQuery) + '&type=code';
+                      
+                      // 在新标签页打开搜索结果
+                      window.open(searchUrl, '_blank');
+                  }
+                  
+                  // 页面加载完成后聚焦搜索框
+                  window.addEventListener('load', () => {
+                      document.getElementById('searchInput').focus();
+                  });
+                  
+                  // 添加键盘快捷键
+                  document.addEventListener('keydown', (e) => {
+                      // Ctrl/Cmd + K 聚焦搜索框
+                      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                          e.preventDefault();
+                          document.getElementById('searchInput').focus();
+                          document.getElementById('searchInput').select();
+                      }
+                  });
+              </script>
+          </body>
+          </html>
+          HTML_EOF
+          
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
