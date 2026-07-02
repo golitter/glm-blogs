@@ -75,11 +75,19 @@
                   .nav-links a:hover {
                       color: var(--blue-dark);
                   }
-                  .page {
-                      max-width: 1040px;
+                  .page-shell {
+                      max-width: 1510px;
                       width: 100%;
                       margin: 0 auto;
                       padding: 34px 24px 44px;
+                      display: grid;
+                      grid-template-columns: 210px minmax(0, 1040px) 220px;
+                      gap: 20px;
+                      align-items: start;
+                      min-height: calc(100vh - 64px);
+                  }
+                  .page {
+                      width: 100%;
                   }
                   .hero {
                       display: grid;
@@ -187,7 +195,8 @@
                       align-items: start;
                   }
                   .category-panel,
-                  .recent-panel {
+                  .recent-panel,
+                  .side-card {
                       border: 1px solid var(--line);
                       border-radius: 8px;
                       background: var(--surface);
@@ -256,8 +265,17 @@
                       font-weight: 680;
                       line-height: 1.45;
                   }
+                  .file-suffix {
+                      margin-left: 1px;
+                      color: #9aa7b8;
+                      font-size: 12px;
+                      font-weight: 560;
+                  }
                   .recent-file-item:hover .recent-file-name {
                       color: var(--blue-dark);
+                  }
+                  .recent-file-item:hover .file-suffix {
+                      color: #8aa2b4;
                   }
                   .recent-file-path {
                       margin-top: 4px;
@@ -272,6 +290,48 @@
                       color: var(--gold);
                       font-size: 12px;
                       font-weight: 650;
+                  }
+                  .about-block h2,
+                  .search-note h2 {
+                      margin-bottom: 9px;
+                      font-size: 16px;
+                      font-weight: 720;
+                      letter-spacing: 0;
+                  }
+                  .about-block p,
+                  .search-note p {
+                      color: var(--muted);
+                      font-size: 13px;
+                      line-height: 1.7;
+                  }
+                  .about-link {
+                      color: var(--blue-dark);
+                      font-size: 13px;
+                      line-height: 1.7;
+                      text-decoration: none;
+                      word-break: break-all;
+                  }
+                  .about-link:hover {
+                      text-decoration: underline;
+                  }
+                  .search-note code {
+                      padding: 1px 5px;
+                      border: 1px solid var(--line);
+                      border-radius: 5px;
+                      background: var(--surface-soft);
+                      color: var(--text);
+                      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                      font-size: 12px;
+                  }
+                  .right-rail {
+                      min-height: calc(100vh - 142px);
+                      display: flex;
+                      align-items: flex-end;
+                  }
+                  .search-examples {
+                      display: grid;
+                      gap: 6px;
+                      margin-top: 10px;
                   }
                   .update-info {
                       max-width: 1040px;
@@ -289,7 +349,15 @@
                           font-size: 13px;
                       }
                       .page {
+                          width: 100%;
+                      }
+                      .page-shell {
+                          grid-template-columns: 1fr;
                           padding-top: 36px;
+                      }
+                      .right-rail {
+                          min-height: 0;
+                          display: block;
                       }
                       .content-grid {
                           grid-template-columns: 1fr;
@@ -340,78 +408,96 @@
                   </nav>
               </header>
 
-              <main class="page">
-                  <section class="hero">
-                      <div>
-                          <h1>技术博客</h1>
-                          <p class="subtitle">记录工程实践、后端开发、Linux、机器学习和日常开发问题。搜索会跳到 GitHub code search，方便继续筛选文件。</p>
-                      </div>
-                      <div class="stats-inline">
-                          <span>Markdown notes</span>
-                          <strong>__MD_COUNT__</strong>
-                      </div>
+              <div class="page-shell">
+                  <aside class="side-card about-block" aria-labelledby="about-title">
+                      <h2 id="about-title">About</h2>
+                      <a class="about-link" href="https://github.com/golitter" target="_blank" rel="noopener noreferrer">https://github.com/golitter</a>
+                  </aside>
 
-                      <form id="searchForm" onsubmit="performSearch(event)" class="search-panel">
-                          <div class="search-container">
-                              <input 
-                                  type="text" 
-                                  class="search-box" 
-                                  placeholder="搜索 Markdown 内容，例如 qwen、agent、docker"
-                                  id="searchInput"
-                                  name="q"
-                                  autocomplete="off"
-                                  required
-                              >
-                              <button type="submit" class="search-btn" aria-label="搜索">
-                                  <svg viewBox="0 0 24 24" aria-hidden="true">
-                                      <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                                  </svg>
-                              </button>
+                  <main class="page">
+                      <section class="hero">
+                          <div>
+                              <h1>技术博客</h1>
+                              <p class="subtitle">记录工程实践、后端开发、Linux、机器学习和日常开发问题。搜索会跳到 GitHub code search，方便继续筛选文件。</p>
                           </div>
-                      </form>
-                  </section>
+                          <div class="stats-inline">
+                              <span>Markdown notes</span>
+                              <strong>__MD_COUNT__</strong>
+                          </div>
 
-                  <div class="content-grid">
-                      <aside class="category-panel" aria-labelledby="categories-title">
-                          <h2 id="categories-title">
-                              <a class="panel-title-link" href="https://github.com/golitter/glm-blogs" target="_blank" rel="noopener noreferrer">目录</a>
-                          </h2>
-                          <div class="category-list">
-                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/aicode" target="_blank" rel="noopener noreferrer">
-                                  <strong>aicode</strong>
-                                  <span>Codex、SDD、智能体工程</span>
-                              </a>
-                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/llm" target="_blank" rel="noopener noreferrer">
-                                  <strong>llm</strong>
-                                  <span>模型、Agent、RAG、微调</span>
-                              </a>
-                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/backend" target="_blank" rel="noopener noreferrer">
-                                  <strong>backend</strong>
-                                  <span>Go、MySQL、服务端基础</span>
-                              </a>
-                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/linux" target="_blank" rel="noopener noreferrer">
-                                  <strong>linux</strong>
-                                  <span>环境、Git、Docker、远程开发</span>
-                              </a>
-                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/ml" target="_blank" rel="noopener noreferrer">
-                                  <strong>ml</strong>
-                                  <span>机器学习和训练记录</span>
-                              </a>
-                              <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/others" target="_blank" rel="noopener noreferrer">
-                                  <strong>others</strong>
-                                  <span>资料、阅读和杂项</span>
-                              </a>
-                          </div>
-                      </aside>
-
-                      <section class="recent-panel" aria-labelledby="recent-title">
-                          <h2 id="recent-title">最近更新</h2>
-                          <div id="recentFilesList">
-                              __RECENT_FILES_HTML__
-                          </div>
+                          <form id="searchForm" onsubmit="performSearch(event)" class="search-panel">
+                              <div class="search-container">
+                                  <input
+                                      type="text"
+                                      class="search-box"
+                                      placeholder="搜索 Markdown 内容，例如 qwen、agent、docker"
+                                      id="searchInput"
+                                      name="q"
+                                      autocomplete="off"
+                                      required
+                                  >
+                                  <button type="submit" class="search-btn" aria-label="搜索">
+                                      <svg viewBox="0 0 24 24" aria-hidden="true">
+                                          <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                                      </svg>
+                                  </button>
+                              </div>
+                          </form>
                       </section>
-                  </div>
-              </main>
+
+                      <div class="content-grid">
+                          <aside class="category-panel" aria-labelledby="categories-title">
+                              <h2 id="categories-title">
+                                  <a class="panel-title-link" href="https://github.com/golitter/glm-blogs" target="_blank" rel="noopener noreferrer">目录</a>
+                              </h2>
+                              <div class="category-list">
+                                  <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/aicode" target="_blank" rel="noopener noreferrer">
+                                      <strong>aicode</strong>
+                                      <span>Codex、SDD、智能体工程</span>
+                                  </a>
+                                  <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/llm" target="_blank" rel="noopener noreferrer">
+                                      <strong>llm</strong>
+                                      <span>模型、Agent、RAG、微调</span>
+                                  </a>
+                                  <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/backend" target="_blank" rel="noopener noreferrer">
+                                      <strong>backend</strong>
+                                      <span>Go、MySQL、服务端基础</span>
+                                  </a>
+                                  <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/linux" target="_blank" rel="noopener noreferrer">
+                                      <strong>linux</strong>
+                                      <span>环境、Git、Docker、远程开发</span>
+                                  </a>
+                                  <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/ml" target="_blank" rel="noopener noreferrer">
+                                      <strong>ml</strong>
+                                      <span>机器学习和训练记录</span>
+                                  </a>
+                                  <a class="category-link" href="https://github.com/golitter/glm-blogs/tree/master/others" target="_blank" rel="noopener noreferrer">
+                                      <strong>others</strong>
+                                      <span>资料、阅读和杂项</span>
+                                  </a>
+                              </div>
+                          </aside>
+
+                          <section class="recent-panel" aria-labelledby="recent-title">
+                              <h2 id="recent-title">最近更新</h2>
+                              <div id="recentFilesList">
+                                  __RECENT_FILES_HTML__
+                              </div>
+                          </section>
+                      </div>
+                  </main>
+
+                  <aside class="right-rail" aria-label="搜索帮助">
+                      <div class="side-card search-note" aria-labelledby="search-note-title">
+                          <h2 id="search-note-title">搜索提示</h2>
+                          <p>如果关键词中间有空格，请使用英文双引号；多个关键词可以用逗号隔开。</p>
+                          <div class="search-examples">
+                              <p>例如：<code>"go context"</code></p>
+                              <p>例如：<code>agent, rag</code></p>
+                          </div>
+                      </div>
+                  </aside>
+              </div>
               
               <div class="update-info">
                   更新时间: __UPDATE_TIME__ (中国时间)

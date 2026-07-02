@@ -84,12 +84,13 @@ jobs:
               REL_PATH=${filepath#./}
               # 获取文件名
               FILENAME=$(basename "$filepath")
+              FILE_STEM="${FILENAME%.md}"
               # 构建GitHub URL - 使用master分支
               GITHUB_URL="https://github.com/golitter/glm-blogs/blob/master/$REL_PATH"
               
               # 生成HTML
               echo "<a class=\"recent-file-item\" href=\"$GITHUB_URL\" target=\"_blank\" rel=\"noopener noreferrer\">" >> $GITHUB_OUTPUT
-              echo "  <span class=\"recent-file-name\">$FILENAME</span>" >> $GITHUB_OUTPUT
+              echo "  <span class=\"recent-file-name\"><span>$FILE_STEM</span><span class=\"file-suffix\">.md</span></span>" >> $GITHUB_OUTPUT
               echo "  <span class=\"recent-file-path\">$REL_PATH</span>" >> $GITHUB_OUTPUT
               echo "  <span class=\"recent-file-date\">$DATE</span>" >> $GITHUB_OUTPUT
               echo "</a>" >> $GITHUB_OUTPUT
