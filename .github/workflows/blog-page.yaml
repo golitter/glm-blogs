@@ -108,7 +108,7 @@ jobs:
           RECENT_FILES_HTML: ${{ steps.stats.outputs.recent_files_html }}
         run: |
           mkdir -p dist
-          cp .github/dist/index.html dist/index.html
+          cp -R .github/dist/. dist/
           export UPDATE_TIME=$(TZ='Asia/Shanghai' date "+%Y-%m-%d %H:%M:%S")
           python3 <<'PY'
           import os
