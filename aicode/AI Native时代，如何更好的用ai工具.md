@@ -34,7 +34,7 @@ LLM的context很宝贵，呈现U形结构，开始、结尾的重要性远大于
 
 ### 实践经验总结
 
-![image-20260704001637609](AI%20Native%E6%97%B6%E4%BB%A3%EF%BC%8C%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E7%9A%84%E7%94%A8ai%E5%B7%A5%E5%85%B7.assets/image-20260704001637609.png)
+![image](AI%20Native%E6%97%B6%E4%BB%A3%EF%BC%8C%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E7%9A%84%E7%94%A8ai%E5%B7%A5%E5%85%B7.assets/2037fff8-2e76-4c20-adaa-e3c62aa832eb.png)
 
 1. 0→1 先收敛目标，1→N 先定位地形。
 新项目先把模糊想法揉清楚，存量项目先读历史 spec / codemap。
