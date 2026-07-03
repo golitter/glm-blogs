@@ -14,15 +14,22 @@ BRANCH = "master"
 TZ = timezone(timedelta(hours=8))
 
 
+def is_ignored_rel_path(rel_path: str) -> bool:
+    """Skip build output and any path component beginning with a dot.
+
+    Dot-prefixed directories/files (e.g. .git, .github, .claude, .pnpm-store,
+    .DS_Store) are never treated as blog content.
+    """
+    parts = rel_path.split("/")
+    return "dist" in parts or any(part.startswith(".") for part in parts)
+
+
 def is_markdown_file(path: Path) -> bool:
-    rel = path.relative_to(REPO_ROOT)
-    parts = rel.parts
+    rel = path.relative_to(REPO_ROOT).as_posix()
     return (
         path.suffix == ".md"
         and path.name.lower() != "readme.md"
-        and ".git" not in parts
-        and "dist" not in parts
-        and not rel.as_posix().startswith(".github/")
+        and not is_ignored_rel_path(rel)
     )
 
 
@@ -113,6 +120,7 @@ def build_recent_files() -> list[dict]:
             current_time
             and rel_path.endswith(".md")
             and Path(rel_path).name.lower() != "readme.md"
+            and not is_ignored_rel_path(rel_path)
             and rel_path not in seen
             and (REPO_ROOT / rel_path).is_file()
         ):

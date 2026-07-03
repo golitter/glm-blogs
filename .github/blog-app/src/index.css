@@ -1,23 +1,141 @@
 @import "tailwindcss";
 
+@theme {
+  /* Type families. Geist is the primary face; the serif stack adds an editorial
+     voice for the masthead and the mono stack carries metadata + keystrokes.
+     System-native fallbacks keep everything legible offline and for CJK glyphs. */
+  --font-sans:
+    "Geist Variable", Inter, ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-serif:
+    "Iowan Old Style", "Palatino Linotype", "URW Palladio L", P052, Palatino,
+    "Songti SC", "Source Han Serif SC", "Noto Serif SC", Georgia, serif;
+  --font-mono:
+    "Geist Mono", ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", monospace;
+
+  /* Warm bone canvas — never pure white, never cold gray. */
+  --color-canvas: #f7f6f2;
+  --color-surface: #fdfdfb;
+  --color-recess: #f0eee8;
+
+  /* Ink scale: warm near-black down to a faint hairline tone. */
+  --color-ink: #1c1b19;
+  --color-ink-soft: #4b4944;
+  --color-ink-muted: #8a8780;
+  --color-ink-faint: #b8b5ac;
+
+  /* Hairline rules. */
+  --color-line: #e7e5df;
+  --color-line-strong: #d8d5cc;
+
+  /* Desaturated pastel category tones — color is scarce, used semantically. */
+  --color-tag-sage-bg: #e9efe6;
+  --color-tag-sage-ink: #4a6b45;
+  --color-tag-clay-bg: #f3e7e1;
+  --color-tag-clay-ink: #9a4a2c;
+  --color-tag-amber-bg: #f5efe0;
+  --color-tag-amber-ink: #8a6a1e;
+  --color-tag-plum-bg: #efe9ef;
+  --color-tag-plum-ink: #6a4a66;
+  --color-tag-slate-bg: #e9ecea;
+  --color-tag-slate-ink: #46555a;
+  --color-tag-sky-bg: #e6eef2;
+  --color-tag-sky-ink: #3d6678;
+
+  /* Warm-tinted shadows: one consistent top-down light source. */
+  --shadow-soft: 0 1px 2px rgba(28, 27, 25, 0.03), 0 10px 28px rgba(28, 27, 25, 0.04);
+  --shadow-lift: 0 14px 34px rgba(28, 27, 25, 0.12);
+}
+
 * {
   box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  font-family:
-    Inter,
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  text-wrap: pretty;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Subtle paper grain — fixed, non-interactive, behind everything. Breaks the
+   flat digital surface without adding noise to scrolling content. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+#root {
+  position: relative;
+  z-index: 1;
 }
 
 a {
   color: inherit;
+}
+
+::selection {
+  background-color: var(--color-ink);
+  color: var(--color-canvas);
+}
+
+/* Keyboard keys rendered as physical chips. */
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  padding: 0 0.3rem;
+  border: 1px solid var(--color-line-strong);
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+  background-color: var(--color-recess);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  line-height: 1.4rem;
+  color: var(--color-ink-soft);
+}
+
+/* Staggered entrance (CSS-only, no scroll listeners). */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

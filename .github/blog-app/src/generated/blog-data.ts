@@ -592,6 +592,12 @@ export const blogTree = [
 ] satisfies BlogTreeNode[];
 export const recentFiles = [
   {
+    "title": "golemon-blogs页面",
+    "path": "others/golemon-blogs页面.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/others/golemon-blogs%E9%A1%B5%E9%9D%A2.md",
+    "date": "2026-07-03 15:13"
+  },
+  {
     "title": "世界模型入门",
     "path": "wm/世界模型入门.md",
     "url": "https://github.com/golitter/glm-blogs/blob/master/wm/%E4%B8%96%E7%95%8C%E6%A8%A1%E5%9E%8B%E5%85%A5%E9%97%A8.md",
@@ -614,13 +620,7 @@ export const recentFiles = [
     "path": "backend/go/go基础-error详解.md",
     "url": "https://github.com/golitter/glm-blogs/blob/master/backend/go/go%E5%9F%BA%E7%A1%80-error%E8%AF%A6%E8%A7%A3.md",
     "date": "2026-06-27 14:49"
-  },
-  {
-    "title": "go并发-context详解",
-    "path": "backend/go/go并发-context详解.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/backend/go/go%E5%B9%B6%E5%8F%91-context%E8%AF%A6%E8%A7%A3.md",
-    "date": "2026-06-26 23:31"
   }
 ] satisfies RecentFile[];
 export const markdownCount = 82;
-export const updateTime = "2026-07-03 15:10:59";
+export const updateTime = "2026-07-03 16:36:33";
