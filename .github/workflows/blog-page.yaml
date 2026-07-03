@@ -6,13 +6,13 @@ on:
     paths:
       - '**.md'
       - '.github/workflows/blog-page.yaml'
-      - '.github/dist/index.html'
+      - '.github/blog-app/**'
   pull_request:
     branches: [ main, master ]
     paths:
       - '**.md'
       - '.github/workflows/blog-page.yaml'
-      - '.github/dist/index.html'
+      - '.github/blog-app/**'
 #   workflow_dispatch:
 #   schedule:
 #     # 每天北京时间上午9点（UTC时间1点）自动更新一次
@@ -38,174 +38,34 @@ jobs:
         
       - name: Setup Pages
         uses: actions/configure-pages@v4
-        
-      - name: Get repository stats
-        id: stats
-        run: |
-          # 设置时区为中国东八区
-          export TZ='Asia/Shanghai'
-          
-          # 统计markdown文件数量
-          MD_COUNT=$(find . -name "*.md" -not -iname "readme.md" -not -path "./.git/*" -not -path "./dist/*" | wc -l)
-          echo "md_count=$MD_COUNT" >> $GITHUB_OUTPUT
-          
-          # 生成最近文件HTML
-          echo "recent_files_html<<EOF" >> $GITHUB_OUTPUT
-          
-          # 禁用路径名的引号转义，确保中文路径显示正常
-          git config --global core.quotepath false
-          # 使用git log获取最近提交的文件
-          git log --name-only --pretty=format:"%ct|%H" -20 -- "*.md" | \
-          awk '
-          BEGIN { 
-            count = 0; 
-            current_time = "";
-            current_hash = "";
-          }
-          /^[0-9]+\|/ { 
-            split($0, parts, "|");
-            current_time = parts[1]; 
-            current_hash = parts[2];
-            next;
-          }
-          /^[^0-9]/ { 
-            if (current_time != "" && $0 ~ /\.md$/ && !seen[$0]++) {
-              print current_time "|" current_hash "|" $0;
-              count++;
-              if (count >= 5) exit;
-            }
-          }
-          ' | sort -nr | while IFS='|' read -r timestamp commit_hash filepath; do
-            
-            FILENAME=$(basename "$filepath")
-            if [[ -n "$filepath" && -f "$filepath" && "${FILENAME,,}" != "readme.md" ]]; then
-              # 转换时间戳为中国时间格式
-              DATE=$(TZ='Asia/Shanghai' date -d "@$timestamp" "+%Y-%m-%d %H:%M")
-              # 获取相对路径（去掉开头的./）
-              REL_PATH=${filepath#./}
-              FILE_STEM="${FILENAME%.md}"
-              # 构建GitHub URL - 使用master分支
-              GITHUB_URL="https://github.com/golitter/glm-blogs/blob/master/$REL_PATH"
-              
-              # 生成HTML
-              echo "<a class=\"recent-file-item\" href=\"$GITHUB_URL\" target=\"_blank\" rel=\"noopener noreferrer\">" >> $GITHUB_OUTPUT
-              echo "  <span class=\"recent-file-name\"><span>$FILE_STEM</span><span class=\"file-suffix\">.md</span></span>" >> $GITHUB_OUTPUT
-              echo "  <span class=\"recent-file-path\">$REL_PATH</span>" >> $GITHUB_OUTPUT
-              echo "  <span class=\"recent-file-date\">$DATE</span>" >> $GITHUB_OUTPUT
-              echo "</a>" >> $GITHUB_OUTPUT
-              
-              echo "Added: $FILENAME ($DATE)"
-            fi
-          done
-          
-          echo "EOF" >> $GITHUB_OUTPUT
-          
-          echo "Markdown files: $MD_COUNT"
-        
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: .github/blog-app/package.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: .github/blog-app/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: .github/blog-app
+        run: pnpm install --frozen-lockfile
+
       - name: Build blog page
-        env:
-          MD_COUNT: ${{ steps.stats.outputs.md_count }}
-          RECENT_FILES_HTML: ${{ steps.stats.outputs.recent_files_html }}
+        working-directory: .github/blog-app
         run: |
-          mkdir -p dist
-          cp -R .github/dist/. dist/
-          export UPDATE_TIME=$(TZ='Asia/Shanghai' date "+%Y-%m-%d %H:%M:%S")
-          python3 <<'PY'
-          import os
-          from html import escape
-          from pathlib import Path
-          from urllib.parse import quote
-
-          REPO_URL = "https://github.com/golitter/glm-blogs"
-          BRANCH = "master"
-
-          def is_markdown_file(path):
-              parts = path.parts
-              return (
-                  path.suffix == ".md"
-                  and path.name.lower() != "readme.md"
-                  and ".git" not in parts
-                  and "dist" not in parts
-                  and not str(path).startswith(".github/")
-              )
-
-          def github_url(kind, rel_path):
-              encoded = "/".join(quote(part) for part in rel_path.split("/"))
-              return f"{REPO_URL}/{kind}/{BRANCH}/{encoded}"
-
-          def new_node():
-              return {"dirs": {}, "files": []}
-
-          def add_file(tree, rel_path):
-              parts = rel_path.split("/")
-              current = tree
-              for part in parts[:-1]:
-                  current = current["dirs"].setdefault(part, new_node())
-              current["files"].append(parts[-1])
-
-          def count_files(node):
-              return len(node["files"]) + sum(count_files(child) for child in node["dirs"].values())
-
-          def render_node(name, node, rel_parts):
-              file_count = count_files(node)
-              pieces = [
-                  '<div class="category-node">',
-                  '<details>',
-                  '<summary>',
-                  f'<span class="category-node-label">{escape(name)}</span>',
-                  f'<span class="category-count">{file_count}</span>',
-                  '</summary>',
-                  '<div class="category-children">',
-              ]
-
-              for dirname, child in sorted(node["dirs"].items(), key=lambda item: item[0].lower()):
-                  pieces.append(render_node(dirname, child, rel_parts + [dirname]))
-
-              for filename in sorted(node["files"], key=str.lower):
-                  file_rel_path = "/".join(rel_parts + [filename])
-                  title = filename[:-3] if filename.endswith(".md") else filename
-                  pieces.extend([
-                      f'<a class="category-file" href="{github_url("blob", file_rel_path)}" target="_blank" rel="noopener noreferrer">',
-                      f'<span class="category-file-title">{escape(title)}</span>',
-                      '</a>',
-                  ])
-
-              pieces.extend(["</div>", "</details>", "</div>"])
-              return "\n".join(pieces)
-
-          def build_category_tree_html():
-              tree = new_node()
-              for md_path in sorted(Path(".").rglob("*.md")):
-                  if is_markdown_file(md_path):
-                      add_file(tree, md_path.as_posix())
-
-              pieces = []
-              for dirname, child in sorted(tree["dirs"].items(), key=lambda item: item[0].lower()):
-                  pieces.append(render_node(dirname, child, [dirname]))
-
-              for filename in sorted(tree["files"], key=str.lower):
-                  title = filename[:-3] if filename.endswith(".md") else filename
-                  pieces.extend([
-                      f'<a class="category-file" href="{github_url("blob", filename)}" target="_blank" rel="noopener noreferrer">',
-                      f'<span class="category-file-title">{escape(title)}</span>',
-                      '</a>',
-                  ])
-
-              return "\n".join(pieces)
-
-          path = Path("dist/index.html")
-          html = path.read_text(encoding="utf-8")
-          html = html.replace("__MD_COUNT__", os.environ.get("MD_COUNT", "0"))
-          html = html.replace("__RECENT_FILES_HTML__", os.environ.get("RECENT_FILES_HTML", ""))
-          html = html.replace("__CATEGORY_TREE_HTML__", build_category_tree_html())
-          html = html.replace("__UPDATE_TIME__", os.environ.get("UPDATE_TIME", ""))
-          path.write_text(html, encoding="utf-8")
-          PY
+          python3 scripts/generate-blog-data.py
+          ./node_modules/.bin/tsc --noEmit
+          ./node_modules/.bin/vite build
           
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist
+          path: ./.github/blog-app/dist
 
   deploy:
     environment:

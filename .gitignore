@@ -1,1 +1,6 @@
 .DS_Store
+/.pnpm-store/
+/dist/
+node_modules/
+.github/blog-app/node_modules/
+.github/blog-app/dist/
