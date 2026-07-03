@@ -46,7 +46,7 @@ jobs:
           export TZ='Asia/Shanghai'
           
           # 统计markdown文件数量
-          MD_COUNT=$(find . -name "*.md" -not -path "./.git/*" -not -path "./dist/*" | wc -l)
+          MD_COUNT=$(find . -name "*.md" -not -iname "readme.md" -not -path "./.git/*" -not -path "./dist/*" | wc -l)
           echo "md_count=$MD_COUNT" >> $GITHUB_OUTPUT
           
           # 生成最近文件HTML
@@ -77,13 +77,12 @@ jobs:
           }
           ' | sort -nr | while IFS='|' read -r timestamp commit_hash filepath; do
             
-            if [[ -n "$filepath" && -f "$filepath" ]]; then
+            FILENAME=$(basename "$filepath")
+            if [[ -n "$filepath" && -f "$filepath" && "${FILENAME,,}" != "readme.md" ]]; then
               # 转换时间戳为中国时间格式
               DATE=$(TZ='Asia/Shanghai' date -d "@$timestamp" "+%Y-%m-%d %H:%M")
               # 获取相对路径（去掉开头的./）
               REL_PATH=${filepath#./}
-              # 获取文件名
-              FILENAME=$(basename "$filepath")
               FILE_STEM="${FILENAME%.md}"
               # 构建GitHub URL - 使用master分支
               GITHUB_URL="https://github.com/golitter/glm-blogs/blob/master/$REL_PATH"
@@ -113,12 +112,92 @@ jobs:
           export UPDATE_TIME=$(TZ='Asia/Shanghai' date "+%Y-%m-%d %H:%M:%S")
           python3 <<'PY'
           import os
+          from html import escape
           from pathlib import Path
+          from urllib.parse import quote
+
+          REPO_URL = "https://github.com/golitter/glm-blogs"
+          BRANCH = "master"
+
+          def is_markdown_file(path):
+              parts = path.parts
+              return (
+                  path.suffix == ".md"
+                  and path.name.lower() != "readme.md"
+                  and ".git" not in parts
+                  and "dist" not in parts
+                  and not str(path).startswith(".github/")
+              )
+
+          def github_url(kind, rel_path):
+              encoded = "/".join(quote(part) for part in rel_path.split("/"))
+              return f"{REPO_URL}/{kind}/{BRANCH}/{encoded}"
+
+          def new_node():
+              return {"dirs": {}, "files": []}
+
+          def add_file(tree, rel_path):
+              parts = rel_path.split("/")
+              current = tree
+              for part in parts[:-1]:
+                  current = current["dirs"].setdefault(part, new_node())
+              current["files"].append(parts[-1])
+
+          def count_files(node):
+              return len(node["files"]) + sum(count_files(child) for child in node["dirs"].values())
+
+          def render_node(name, node, rel_parts):
+              file_count = count_files(node)
+              pieces = [
+                  '<div class="category-node">',
+                  '<details>',
+                  '<summary>',
+                  f'<span class="category-node-label">{escape(name)}</span>',
+                  f'<span class="category-count">{file_count}</span>',
+                  '</summary>',
+                  '<div class="category-children">',
+              ]
+
+              for dirname, child in sorted(node["dirs"].items(), key=lambda item: item[0].lower()):
+                  pieces.append(render_node(dirname, child, rel_parts + [dirname]))
+
+              for filename in sorted(node["files"], key=str.lower):
+                  file_rel_path = "/".join(rel_parts + [filename])
+                  title = filename[:-3] if filename.endswith(".md") else filename
+                  pieces.extend([
+                      f'<a class="category-file" href="{github_url("blob", file_rel_path)}" target="_blank" rel="noopener noreferrer">',
+                      f'<span class="category-file-title">{escape(title)}</span>',
+                      '</a>',
+                  ])
+
+              pieces.extend(["</div>", "</details>", "</div>"])
+              return "\n".join(pieces)
+
+          def build_category_tree_html():
+              tree = new_node()
+              for md_path in sorted(Path(".").rglob("*.md")):
+                  if is_markdown_file(md_path):
+                      add_file(tree, md_path.as_posix())
+
+              pieces = []
+              for dirname, child in sorted(tree["dirs"].items(), key=lambda item: item[0].lower()):
+                  pieces.append(render_node(dirname, child, [dirname]))
+
+              for filename in sorted(tree["files"], key=str.lower):
+                  title = filename[:-3] if filename.endswith(".md") else filename
+                  pieces.extend([
+                      f'<a class="category-file" href="{github_url("blob", filename)}" target="_blank" rel="noopener noreferrer">',
+                      f'<span class="category-file-title">{escape(title)}</span>',
+                      '</a>',
+                  ])
+
+              return "\n".join(pieces)
 
           path = Path("dist/index.html")
           html = path.read_text(encoding="utf-8")
           html = html.replace("__MD_COUNT__", os.environ.get("MD_COUNT", "0"))
           html = html.replace("__RECENT_FILES_HTML__", os.environ.get("RECENT_FILES_HTML", ""))
+          html = html.replace("__CATEGORY_TREE_HTML__", build_category_tree_html())
           html = html.replace("__UPDATE_TIME__", os.environ.get("UPDATE_TIME", ""))
           path.write_text(html, encoding="utf-8")
           PY
