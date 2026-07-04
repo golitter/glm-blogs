@@ -20,7 +20,7 @@ export const blogTree = [
   {
     "name": "aicode",
     "path": "aicode",
-    "count": 8,
+    "count": 10,
     "children": [],
     "files": [
       {
@@ -37,6 +37,11 @@ export const blogTree = [
         "title": "ai engineer时代",
         "path": "aicode/ai engineer时代.md",
         "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/ai%20engineer%E6%97%B6%E4%BB%A3.md"
+      },
+      {
+        "title": "AI Native时代，如何更好的用ai工具",
+        "path": "aicode/AI Native时代，如何更好的用ai工具.md",
+        "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/AI%20Native%E6%97%B6%E4%BB%A3%EF%BC%8C%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E7%9A%84%E7%94%A8ai%E5%B7%A5%E5%85%B7.md"
       },
       {
         "title": "codegraph",
@@ -57,6 +62,11 @@ export const blogTree = [
         "title": "skills",
         "path": "aicode/skills.md",
         "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/skills.md"
+      },
+      {
+        "title": "字节2026-ai全栈挑战赛ai协助开发记录",
+        "path": "aicode/字节2026-ai全栈挑战赛ai协助开发记录.md",
+        "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/%E5%AD%97%E8%8A%822026-ai%E5%85%A8%E6%A0%88%E6%8C%91%E6%88%98%E8%B5%9Bai%E5%8D%8F%E5%8A%A9%E5%BC%80%E5%8F%91%E8%AE%B0%E5%BD%95.md"
       },
       {
         "title": "工程技术：在智能体优先的世界中利用 Codex",
@@ -275,18 +285,23 @@ export const blogTree = [
   {
     "name": "llm",
     "path": "llm",
-    "count": 31,
+    "count": 32,
     "children": [
       {
         "name": "agent",
         "path": "llm/agent",
-        "count": 14,
+        "count": 15,
         "children": [],
         "files": [
           {
             "title": "agent时代的CLI",
             "path": "llm/agent/agent时代的CLI.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/agent%E6%97%B6%E4%BB%A3%E7%9A%84CLI.md"
+          },
+          {
+            "title": "agent评测",
+            "path": "llm/agent/agent评测.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/agent%E8%AF%84%E6%B5%8B.md"
           },
           {
             "title": "claude code源码",
@@ -516,60 +531,15 @@ export const blogTree = [
   {
     "name": "skills",
     "path": "skills",
-    "count": 5,
-    "children": [
+    "count": 1,
+    "children": [],
+    "files": [
       {
-        "name": "course",
-        "path": "skills/course",
-        "count": 5,
-        "children": [
-          {
-            "name": "docs",
-            "path": "skills/course/docs",
-            "count": 1,
-            "children": [],
-            "files": [
-              {
-                "title": "usage",
-                "path": "skills/course/docs/usage.md",
-                "url": "https://github.com/golitter/glm-blogs/blob/master/skills/course/docs/usage.md"
-              }
-            ]
-          },
-          {
-            "name": "sub",
-            "path": "skills/course/sub",
-            "count": 3,
-            "children": [],
-            "files": [
-              {
-                "title": "content",
-                "path": "skills/course/sub/content.md",
-                "url": "https://github.com/golitter/glm-blogs/blob/master/skills/course/sub/content.md"
-              },
-              {
-                "title": "plan",
-                "path": "skills/course/sub/plan.md",
-                "url": "https://github.com/golitter/glm-blogs/blob/master/skills/course/sub/plan.md"
-              },
-              {
-                "title": "summary",
-                "path": "skills/course/sub/summary.md",
-                "url": "https://github.com/golitter/glm-blogs/blob/master/skills/course/sub/summary.md"
-              }
-            ]
-          }
-        ],
-        "files": [
-          {
-            "title": "SKILL",
-            "path": "skills/course/SKILL.md",
-            "url": "https://github.com/golitter/glm-blogs/blob/master/skills/course/SKILL.md"
-          }
-        ]
+        "title": "index",
+        "path": "skills/index.md",
+        "url": "https://github.com/golitter/glm-blogs/blob/master/skills/index.md"
       }
-    ],
-    "files": []
+    ]
   },
   {
     "name": "wm",
@@ -592,35 +562,35 @@ export const blogTree = [
 ] satisfies BlogTreeNode[];
 export const recentFiles = [
   {
+    "title": "AI Native时代，如何更好的用ai工具",
+    "path": "aicode/AI Native时代，如何更好的用ai工具.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/AI%20Native%E6%97%B6%E4%BB%A3%EF%BC%8C%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E7%9A%84%E7%94%A8ai%E5%B7%A5%E5%85%B7.md",
+    "date": "2026-07-04 00:25"
+  },
+  {
+    "title": "字节2026-ai全栈挑战赛ai协助开发记录",
+    "path": "aicode/字节2026-ai全栈挑战赛ai协助开发记录.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/%E5%AD%97%E8%8A%822026-ai%E5%85%A8%E6%A0%88%E6%8C%91%E6%88%98%E8%B5%9Bai%E5%8D%8F%E5%8A%A9%E5%BC%80%E5%8F%91%E8%AE%B0%E5%BD%95.md",
+    "date": "2026-07-04 00:21"
+  },
+  {
+    "title": "agent评测",
+    "path": "llm/agent/agent评测.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/agent%E8%AF%84%E6%B5%8B.md",
+    "date": "2026-07-03 23:20"
+  },
+  {
     "title": "golemon-blogs页面",
     "path": "others/golemon-blogs页面.md",
     "url": "https://github.com/golitter/glm-blogs/blob/master/others/golemon-blogs%E9%A1%B5%E9%9D%A2.md",
-    "date": "2026-07-03 15:13"
+    "date": "2026-07-03 16:56"
   },
   {
     "title": "世界模型入门",
     "path": "wm/世界模型入门.md",
     "url": "https://github.com/golitter/glm-blogs/blob/master/wm/%E4%B8%96%E7%95%8C%E6%A8%A1%E5%9E%8B%E5%85%A5%E9%97%A8.md",
     "date": "2026-07-02 23:59"
-  },
-  {
-    "title": "LLM到World Model",
-    "path": "wm/LLM到World Model.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/wm/LLM%E5%88%B0World%20Model.md",
-    "date": "2026-07-02 23:22"
-  },
-  {
-    "title": "go相关标准库",
-    "path": "backend/go/go相关标准库.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/backend/go/go%E7%9B%B8%E5%85%B3%E6%A0%87%E5%87%86%E5%BA%93.md",
-    "date": "2026-06-29 15:52"
-  },
-  {
-    "title": "go基础-error详解",
-    "path": "backend/go/go基础-error详解.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/backend/go/go%E5%9F%BA%E7%A1%80-error%E8%AF%A6%E8%A7%A3.md",
-    "date": "2026-06-27 14:49"
   }
 ] satisfies RecentFile[];
-export const markdownCount = 82;
-export const updateTime = "2026-07-03 16:36:33";
+export const markdownCount = 81;
+export const updateTime = "2026-07-04 17:51:36";

@@ -13,15 +13,46 @@ REPO_URL = "https://github.com/golitter/glm-blogs"
 BRANCH = "master"
 TZ = timezone(timedelta(hours=8))
 
+# ---- 前端可见性规则 ----
+# 路径均为相对仓库根目录，用 "/" 分隔。两套互补规则：
+#
+# 1) EXCLUDED_PATHS（黑名单）：隐藏整个目录 或 某个具体文件
+#    "some/dir"          -> 该目录下所有 md（任意层级）都不展示
+#    "path/to/file.md"   -> 仅隐藏这一个文件
+#
+# 2) INCLUDE_ONLY（按目录白名单）：某目录下「只展示」列出的文件，其余全部隐藏
+#    "skills": {"skills/index.md"}  -> skills 下只展示 index.md
+#    键是目录路径，值是该目录下允许展示的文件全路径集合
+#
+# 优先级：黑名单 > 白名单（被 EXCLUDED_PATHS 命中的一定隐藏，即使在白名单里也一样）
+EXCLUDED_PATHS: set[str] = {
+    # "some/dir",
+    # "path/to/file.md",
+}
+
+INCLUDE_ONLY: dict[str, set[str]] = {
+    "skills": {"skills/index.md"},
+}
+
 
 def is_ignored_rel_path(rel_path: str) -> bool:
-    """Skip build output and any path component beginning with a dot.
+    """Decide whether a markdown path is hidden from the blog frontend.
 
-    Dot-prefixed directories/files (e.g. .git, .github, .claude, .pnpm-store,
-    .DS_Store) are never treated as blog content.
+    Three layers, checked in order of precedence:
+      1. Build output / dot-prefixed paths (.git, .github, .claude, .DS_Store...)
+      2. EXCLUDED_PATHS — hide a whole directory (prefix match) or a single file
+      3. INCLUDE_ONLY — if the file sits under a restricted directory, it is
+         shown only when explicitly listed in that directory's allowlist
     """
     parts = rel_path.split("/")
-    return "dist" in parts or any(part.startswith(".") for part in parts)
+    if "dist" in parts or any(part.startswith(".") for part in parts):
+        return True
+    if any(rel_path == p or rel_path.startswith(p + "/") for p in EXCLUDED_PATHS):
+        return True
+    for dir_key, allowed in INCLUDE_ONLY.items():
+        if rel_path.startswith(dir_key + "/") and rel_path not in allowed:
+            return True
+    return False
 
 
 def is_markdown_file(path: Path) -> bool:
