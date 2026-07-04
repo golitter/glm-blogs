@@ -9,13 +9,16 @@ export function CategoryNode({
   openPaths,
   togglePath,
   tone,
+  depth = 0,
 }: {
   node: BlogTreeNode;
   openPaths: Set<string>;
   togglePath: (path: string) => void;
   tone?: CategoryTone;
+  depth?: number;
 }) {
   const isOpen = openPaths.has(node.path);
+  const isTopLevel = depth === 0;
 
   return (
     <div className="rounded-md">
@@ -23,8 +26,15 @@ export function CategoryNode({
         type="button"
         className={cn(
           "grid min-h-9 w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-recess active:scale-[0.995]",
-          isOpen && "bg-recess",
+          isOpen && (isTopLevel ? "bg-recess" : "bg-surface"),
         )}
+        style={
+          isOpen && !isTopLevel && tone
+            ? {
+                backgroundColor: tone.bg,
+              }
+            : undefined
+        }
         onClick={() => togglePath(node.path)}
       >
         <span className="inline-flex items-center gap-2 text-ink">
@@ -61,7 +71,14 @@ export function CategoryNode({
       {isOpen ? (
         <div className="ml-[15px] grid min-w-0 gap-px overflow-hidden border-l border-line pl-3">
           {node.children.map((child) => (
-            <CategoryNode key={child.path} node={child} openPaths={openPaths} togglePath={togglePath} />
+            <CategoryNode
+              key={child.path}
+              node={child}
+              openPaths={openPaths}
+              togglePath={togglePath}
+              tone={tone}
+              depth={depth + 1}
+            />
           ))}
           {node.files.map((file) => (
             <a
