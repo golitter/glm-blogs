@@ -1,0 +1,4 @@
+interface:
+  display_name: "Python DL Development"
+  short_description: "Typed Python DL engineering conventions"
+  default_prompt: "Use $python-dl-development to implement a typed module-based Python deep learning feature."

@@ -16,6 +16,9 @@ Claude Code 自定义技能集合。
 /course               # 自动判断下一步该做什么
 ```
 
+## python-dl-development
+
+用于 Python 深度学习/机器学习项目的开发规范 skill，要求代码以模块方式运行，使用 src 结构和清晰导入，函数具备严格类型注解，配置和结构化数据优先用 Pydantic 表达，遵循 PEP 8，Ruff 仅在项目已有配置时使用，并避免硬编码绝对路径和实验环境配置。
 
 
 ## taste skill
