@@ -562,6 +562,12 @@ export const blogTree = [
 ] satisfies BlogTreeNode[];
 export const recentFiles = [
   {
+    "title": "index",
+    "path": "skills/index.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/skills/index.md",
+    "date": "2026-07-04 17:53"
+  },
+  {
     "title": "AI Native时代，如何更好的用ai工具",
     "path": "aicode/AI Native时代，如何更好的用ai工具.md",
     "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/AI%20Native%E6%97%B6%E4%BB%A3%EF%BC%8C%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E7%9A%84%E7%94%A8ai%E5%B7%A5%E5%85%B7.md",
@@ -584,13 +590,7 @@ export const recentFiles = [
     "path": "others/golemon-blogs页面.md",
     "url": "https://github.com/golitter/glm-blogs/blob/master/others/golemon-blogs%E9%A1%B5%E9%9D%A2.md",
     "date": "2026-07-03 16:56"
-  },
-  {
-    "title": "世界模型入门",
-    "path": "wm/世界模型入门.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/wm/%E4%B8%96%E7%95%8C%E6%A8%A1%E5%9E%8B%E5%85%A5%E9%97%A8.md",
-    "date": "2026-07-02 23:59"
   }
 ] satisfies RecentFile[];
 export const markdownCount = 81;
-export const updateTime = "2026-07-04 17:51:36";
+export const updateTime = "2026-07-04 18:04:37";
