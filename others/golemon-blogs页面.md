@@ -139,12 +139,55 @@ src/
 
 改完务必 `cd .github/blog-app && pnpm build` 验证 —— `tsc --noEmit` 会拦住类型错误和未使用的导入。
 
-## 五、数据流与注意事项
+## 五、数据流与内容可见性
 
-- 数据流：`scripts/generate-blog-data.py`（扫 `*.md` + `git log` 取最近更新）→ `src/generated/blog-data.ts`（导出 `blogTree` / `recentFiles` / `markdownCount` / `updateTime`）。
+### 数据流
+
+`scripts/generate-blog-data.py`（扫 `*.md` + `git log` 取最近更新）→ `src/generated/blog-data.ts`（导出 `blogTree` / `recentFiles` / `markdownCount` / `updateTime`）→ React 组件渲染。
+
+- 目录树**完全从 md 文件路径反推**：一个目录要出现，前提是它下面至少有一个「够格展示」的 md；没有 md 的目录不会出现。
 - `src/generated/blog-data.ts` **是生成文件，不要手动编辑**；要改逻辑去改 python 脚本。
 - `pnpm build` 的 `prebuild` 会自动重跑 python；`pnpm dev` 不会，需手动跑。
 - 所有 `pnpm` 命令在 `.github/blog-app` 下执行。
+
+### 哪些 md 会出现在前端（可见性规则）
+
+脚本里 `is_ignored_rel_path()` 依次判断，命中任何一层就隐藏：
+
+| 层 | 规则 | 命中示例 |
+|---|---|---|
+| ① 自动 | 路径包含 `dist`（构建产物） | `dist/...` |
+| ① 自动 | 任一路径段以 `.` 开头（配置 / 工具目录） | `.github/...`、`.claude/...`、`.git/...`、`.DS_Store` |
+| ① 自动 | 文件名为 `readme.md`（不区分大小写） | 任意目录下的 `README.md` |
+| ② 黑名单 | `EXCLUDED_PATHS` 命中 | 见下 |
+| ③ 白名单 | `INCLUDE_ONLY` 命中 | 见下 |
+
+**黑名单 `EXCLUDED_PATHS`**（隐藏目录 / 文件）和**白名单 `INCLUDE_ONLY`**（某目录下只看指定文件）都在 `scripts/generate-blog-data.py` 顶部：
+
+```python
+EXCLUDED_PATHS: set[str] = {
+    "linux/docker",          # 整个目录：该目录下所有 md（任意层级）都不展示
+    "others/某篇草稿.md",     # 单个文件：仅隐藏这一个
+}
+
+INCLUDE_ONLY: dict[str, set[str]] = {
+    "skills": {"skills/index.md"},   # skills 下只展示 index.md，其余全部隐藏
+}
+```
+
+优先级：**自动规则 ≈ 黑名单 > 白名单**（被自动规则或黑名单命中的一定隐藏，即使在白名单里也一样）。
+
+三种场景速查：
+
+| 想做什么 | 配置 |
+|---|---|
+| 隐藏整个目录 | `EXCLUDED_PATHS` 加 `"目录路径"` |
+| 隐藏某个文件 | `EXCLUDED_PATHS` 加 `"文件路径.md"` |
+| 某目录只展示指定文件 | `INCLUDE_ONLY` 加 `"目录": {"允许的文件.md", ...}` |
+
+> 实例：`skills/` 原有 `readme.md` + `course/` + `python-dl-development/` + `zip/`，想只展示一篇总览。把 `readme.md` 改名为 `index.md`（避开 readme 自动隐藏），再设 `INCLUDE_ONLY = {"skills": {"skills/index.md"}}`，其余子目录自动全隐藏。
+
+改了规则或增删 md 后，重跑 `python3 scripts/generate-blog-data.py`（或 `pnpm build`）并提交 `blog-data.ts` 即生效，前端代码无需改动。
 
 ## 六、性能要点
 
