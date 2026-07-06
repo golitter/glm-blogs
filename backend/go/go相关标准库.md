@@ -245,6 +245,63 @@ http.HandleFunc("/index", func(w http.ResponseWriter, r *http.Request) {
 http.ListenAndServe(":8080", nil)
 ```
 
+## sort
+
+排序：内置类型直接调现成函数，自定义类型用 `sort.Slice` 或实现 `sort.Interface`。
+
+```go
+sort.Ints([]int{3, 1, 4, 1, 5})    // 升序，原地排
+sort.Float64s(fs)
+sort.Strings(ss)
+
+sort.SearchInts(nums, 4)           // 二分查找下标
+sort.StringsAreSorted(ss)          // 是否已排好
+```
+
+自定义排序最省事的是 `sort.Slice`，传个比较函数：
+
+```go
+sort.Slice(users, func(i, j int) bool {
+    return users[i].Age < users[j].Age
+})
+sort.SliceStable(users, func(i, j int) bool { // 稳定：相等元素保持原序
+    return users[i].Age < users[j].Age
+})
+```
+
+> ⚠️ `sort.Slice` 的比较函数签名是 `Less(i, j int) bool`（**按下标**比较），不是 `Less(a, b T)`。
+
+结构体排序：**只写一个 `Less` 方法本身不会自动排序**，还得调排序函数。两种方式：
+
+```go
+type Adt struct{ l, r int }
+
+// 方式一：sort.Slice，自己传比较函数
+func (a Adt) less(b Adt) bool {
+    if a.l == b.l {
+        return a.r > b.r
+    }
+    return a.l < b.l
+}
+sort.Slice(v, func(i, j int) bool { return v[i].less(v[j]) })
+
+// 方式二：实现 sort.Interface，用 sort.Sort
+type Adts []Adt
+
+func (a Adts) Len() int           { return len(a) }
+func (a Adts) Less(i, j int) bool {
+    if a[i].l == a[j].l {
+        return a[i].r > a[j].r
+    }
+    return a[i].l < a[j].l
+}
+func (a Adts) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+sort.Sort(Adts(v))                 // 或 sort.Stable(Adts(v))
+```
+
+> `func (a Adt) Less(b Adt) bool` 只是个普通方法，`sort` 包**不会自动识别**它；要被 `sort.Sort` 识别，必须实现完整三件套 `Len / Less(i,j) / Swap`，即 `sort.Interface`。Go 1.21+ 推荐直接用泛型 `slices.Sort`/`slices.SortFunc`，更省事。
+
 ## 速查
 
 | 想做 | 用 |
@@ -258,6 +315,7 @@ http.ListenAndServe(":8080", nil)
 | 流式复制 | `io.Copy` |
 | 逐行读文件 | `bufio.Scanner` |
 | JSON 编解码 | `encoding/json` |
+| 排序切片/结构体 | `sort.Slice` / `sort.Sort` |
 | HTTP 请求 | `net/http` |
 
 > **核心**：把 `strings/strconv/time/os/filepath/io/bufio` 加上 `json/http` 用熟，后端日常基本不用引第三方库。
