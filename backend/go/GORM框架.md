@@ -1,243 +1,889 @@
+# GORM 框架
+
 https://mp.weixin.qq.com/s/plzG1mCK8yZwVQOSKZi2XQ
 
 https://gorm.io/zh_CN/docs/index.html
 
 https://blog.csdn.net/u012955829/article/details/142289384
 
+GORM 是 Go 语言常用的 ORM 框架。ORM 即 Object-Relational Mapping，对象关系映射。
 
+- 结构体对应数据库表
+- 结构体字段对应表字段
+- 结构体实例对应表中的一行数据
 
-ORM（Object-Relational Mapping，对象关系映射），就像是一位翻译官，在面向对象的编程语言和关系型数据库之间进行翻译。允许使用面向对象的方式来操作数据库，将数据库表映射到编程语言中的类，将表中的记忆映射到类的实例，以及将表的字段映射到对象的属性。	
+## 安装
 
+如果项目还没有 `go.mod`，先初始化：
 
+```bash
+go mod init gorm-demo
+```
+
+安装 GORM：
+
+```bash
+go get -u gorm.io/gorm
+```
+
+如果使用 MySQL，还需要安装 MySQL 驱动：
+
+```bash
+go get -u gorm.io/driver/mysql
+```
+
+代码里导入：
 
 ```go
-package hello
-
 import (
-	"gorm.io/driver/mysql"  // GORM 的 MySQL 驱动
-	"gorm.io/gorm"          // GORM ORM 框架核心包
-	"sync"                  // 同步工具包，用于实现单例模式
-)
-
-var (
-	// db 全局数据库连接实例，通过单例模式保证只初始化一次
-	db *gorm.DB
-	// dbOnce 用于保证并发安全下的单例初始化，确保 getDB 只执行一次连接创建
-	dbOnce sync.Once
-	// dsn MySQL 数据源连接字符串（Data Source Name）
-	// 格式：用户名:密码@(主机:端口)/数据库名?参数
-	// timeout：连接超时时间
-	// readTimeout：读操作超时时间
-	// writeTimeout：写操作超时时间
-	// charset：字符集编码，utf8mb4 支持完整的 Unicode（包括 emoji）
-	// parseTime：自动将 MySQL 的 TIME/DATE/DATETIME 类型解析为 Go 的 time.Time
-	// loc：时区设置为本地时区
-	dsn = "username:password@(ip:port)/database?timeout=5000ms&readTimeout=5000ms&writeTimeout=5000ms&charset=utf8mb4&parseTime=true&loc=Local"
-)
-
-// getDB 获取全局数据库连接实例（单例模式）
-// 首次调用时会创建连接，后续调用直接返回已创建的实例
-// 返回值：
-//   - *gorm.DB：数据库连接实例
-//   - error：连接创建过程中的错误信息
-func getDB() (*gorm.DB, error) {
-	var err error
-	// Do 中的函数只会执行一次，无论有多少 goroutine 并发调用 getDB
-	// 从而保证数据库连接只被初始化一次，避免重复创建连接
-	dbOnce.Do(func() {
-		// 使用 GORM 打开 MySQL 连接
-		// mysql.Open(dsn) 传入 DSN 创建 MySQL 驱动实例
-		// &gorm.Config{} 使用默认配置（可按需自定义日志、命名策略等）
-		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	})
-	// 如果初始化失败，db 为 nil，err 不为 nil
-	// 调用方需要检查 err 来判断连接是否可用
-	return db, err
-}
-```
-
-
-
-## 持久化对象 PO
-
-GORM 提供了 `gorm.Model`：
-
-```go
-type Model struct {
-    // 主键 id
-    ID        uint `gorm:"primarykey"`
-    // 创建时间
-    CreatedAt time.Time
-    // 更新时间
-    UpdatedAt time.Time
-    // 删除时间
-    DeletedAt DeletedAt `gorm:"index"`
-}
-```
-
-通过引入`gorm.Model`可以为PO添加这四个字段。
-
-```go
-type PO struct {
-    gorm.Model
-}
-```
-
-当添加了`deleteAt`字段，则默认开启**软删除**，在执行删除时不会立即删除数据，而是仅仅将po的`deleteAt`字段设置为非空。
-
-可以通过覆盖`deleteAt`字段进行去除该字段：
-
-```go
-type User struct {
-	gorm.Model // 依然组合 gorm.Model
-	
-	// 使用 gorm:"-" 忽略该字段，数据库建表时不会创建 deleted_at 列
-	// 这样就变相屏蔽了 gorm.Model 中的 DeletedAt 软删除功能
-	DeletedAt interface{} `gorm:"-"` 
-```
-
-> 这个"字段遮蔽"技巧在 GORM v2 中已经不可靠了。GORM v2 会通过反射遍历嵌入结构体的所有字段，即使你在 `User` 中用同名 `DeletedAt` 覆盖，GORM 内部仍能从 `gorm.Model` 中识别出 `DeletedAt gorm.DeletedAt` 并启用软删除。
->
-> 可靠的做法是：**不嵌入 `gorm.Model`，手动定义需要的字段**。
-
-通过下面方式对表命名：
-
-为`User`表结构进行命名为`t_users`。
-
-```go
-func (User) TableName() string {
-	return "t_users"
-}
-```
-
-
-
-之后可以根据go程序中定义的表结构来进行创建表：
-
-```go
-	// 自动建表（根据 User 结构体和标签）
-	db.AutoMigrate(&User{})
-```
-
-建表不是只建一次，而是**每次应用启动都会执行检查，但是其更智能、安全的增量更新**。
-
-- 表不存在时：创建表
-- 表已存在且结构没有发生变化：什么都不做
-- 表已存在但是新添加字段：自动加列
-
-`AutoMigrate`**不会删除列，不会修改列的类型/约束**。
-
-
-
-
-
-```go
-package main
-
-import (
-	"database/sql"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	"sync"
-	"time"
 )
-
-
-// User 持久化对象(PO)，对应数据库中的 user 表
-type User struct {
-	// 2.1 组合 gorm.Model
-	// 包含了 ID(uint主键)、CreatedAt、UpdatedAt、DeletedAt
-	// 启用了 DeletedAt，后续执行删除时会自动开启软删除机制
-	// 不嵌入 gorm.Model，手动定义字段以排除 DeletedAt，从而禁用软删除
-	ID        uint           `gorm:"primarykey"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-
-	// 2.2 使用标签精细控制数据库映射
-	// column:指定列名为name；type:指定为varchar(15)；unique_index:设为唯一索引；not null:非空
-	Name string `gorm:"column:name;type:varchar(15);unique_index;not null"` 
-
-	// 2.3 零值问题解决方案一：使用指针类型
-	// 默认值设为 18。如果使用 int，传入 0 时 GORM 会忽略；
-	// 使用 *int，只要指针非空(即使指向0)，GORM 就会明确将 0 写入数据库
-	Age *int `gorm:"column:age;default:18"` 
-
-	// 2.3 零值问题解决方案二：使用 sql.NullXX 类型
-	// 比如 sql.NullInt64、sql.NullString 等
-	// Valid 为 true 时，代表显式赋值；Valid 为 false 时，代表未赋值(对应DB的NULL)
-	Score sql.NullInt64 `gorm:"column:score"` 
-
-	// 2.2 自增列标签
-	// Num 列的数值会逐行递增
-	Num int `gorm:"auto_increment"` 
-
-	// 额外演示：字符串的零值问题
-	// 如果希望将用户的昵称更新为空字符串 ""，也需要使用指针或 sql.NullString
-	NickName *string `gorm:"column:nickname;type:varchar(50)"` 
-}
-
-// 2.5 表名指定方式一：实现 TableName 方法
-// 只要 User 结构体实现了这个方法，GORM 在执行迁移、增删改查时，都会使用 "t_user" 作为表名
-// 注意：这里接收者是 User 类型即可，不需要指针 *User
-func (User) TableName() string {
-	return "t_users" // 比如我们强制表名为 t_user，不带复数s
-}
-
-var (
-	// db 全局数据库连接实例，通过单例模式保证只初始化一次
-	db *gorm.DB
-	// dbOnce 用于保证并发安全下的单例初始化，确保 getDB 只执行一次连接创建
-	dbOnce sync.Once
-	// dsn MySQL 数据源连接字符串（Data Source Name）
-	// 格式：用户名:密码@(主机:端口)/数据库名?参数
-	// timeout：连接超时时间
-	// readTimeout：读操作超时时间
-	// writeTimeout：写操作超时时间
-	// charset：字符集编码，utf8mb4 支持完整的 Unicode（包括 emoji）
-	// parseTime：自动将 MySQL 的 TIME/DATE/DATETIME 类型解析为 Go 的 time.Time
-	// loc：时区设置为本地时区
-	dsn = "root:123456@(localhost:3306)/sql_learn?timeout=5000ms&readTimeout=5000ms&writeTimeout=5000ms&charset=utf8mb4&parseTime=true&loc=Local"
-)
-
-// getDB 获取全局数据库连接实例（单例模式）
-// 首次调用时会创建连接，后续调用直接返回已创建的实例
-// 返回值：
-//   - *gorm.DB：数据库连接实例
-//   - error：连接创建过程中的错误信息
-func getDB() (*gorm.DB, error) {
-	var err error
-	// Do 中的函数只会执行一次，无论有多少 goroutine 并发调用 getDB
-	// 从而保证数据库连接只被初始化一次，避免重复创建连接
-	dbOnce.Do(func() {
-		// 使用 GORM 打开 MySQL 连接
-		// mysql.Open(dsn) 传入 DSN 创建 MySQL 驱动实例
-		// &gorm.Config{} 使用默认配置（可按需自定义日志、命名策略等）
-		db, err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
-	})
-	// 如果初始化失败，db 为 nil，err 不为 nil
-	// 调用方需要检查 err 来判断连接是否可用
-	return db, err
-}
-
 ```
+
+## 连接 MySQL
 
 ```go
 package main
 
 import (
-	"fmt"
+	"time"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
-func main() {
-	db, err := getDB()
+
+func initDB() (*gorm.DB, error) {
+	dsn := "root:mysql@(localhost:3306)/abc?charset=utf8mb4&parseTime=true&loc=Local"
+
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		panic("Failed to connect to database: " + err.Error())
+		return nil, err
 	}
-	// 连接成功，db 可用于后续的数据库操作
 
-	// 自动建表（根据 User 结构体和标签）
-	db.AutoMigrate(&User{})
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
 
-	fmt.Println("建表完成")
+	sqlDB.SetMaxOpenConns(20)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	return db, nil
 }
 ```
 
+DSN 参数：
+
+- `charset=utf8mb4`：支持完整 Unicode。
+- `parseTime=true`：把 MySQL 时间类型解析为 Go 的 `time.Time`。
+- `loc=Local`：使用本地时区。
+
+连接池配置：
+
+```go
+sqlDB.SetMaxOpenConns(20)
+sqlDB.SetMaxIdleConns(10)
+sqlDB.SetConnMaxLifetime(time.Hour)
+```
+
+- `SetMaxOpenConns`：最大打开连接数。
+- `SetMaxIdleConns`：最大空闲连接数。
+- `SetConnMaxLifetime`：连接最大存活时间。
+
+## 模型定义
+
+```go
+type User struct {
+	ID        uint           `gorm:"primaryKey"`
+	Name      string         `gorm:"column:name;type:varchar(32);not null"`
+	Email     string         `gorm:"column:email;type:varchar(100);uniqueIndex;not null"`
+	Age       *int           `gorm:"column:age;type:int;default:18"`
+	Birthday  *time.Time     `gorm:"column:birthday;type:date"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+}
+```
+
+`ID uint primaryKey` 默认会映射成 MySQL 自增主键。
+
+```go
+ID uint `gorm:"primaryKey"`
+```
+
+大致对应：
+
+```sql
+id bigint unsigned AUTO_INCREMENT PRIMARY KEY
+```
+
+如果不想自增：
+
+```go
+ID uint `gorm:"primaryKey;autoIncrement:false"`
+```
+
+字段 tag 外面的空格只是 Go 代码格式，`gofmt` 会自动处理。
+
+```go
+Email     string         `gorm:"column:email;type:varchar(100);uniqueIndex;not null"`
+```
+
+多个 tag 之间可以有空格：
+
+```go
+Email string `gorm:"column:email" json:"email"`
+```
+
+GORM tag 内部不建议在分号后随意加空格：
+
+```go
+// 推荐
+`gorm:"column:email;type:varchar(100);uniqueIndex;not null"`
+
+// 不推荐
+`gorm:"column:email; type:varchar(100); uniqueIndex; not null"`
+```
+
+## 表名
+
+通过 `TableName` 指定表名：
+
+```go
+func (User) TableName() string {
+	return "l_users"
+}
+```
+
+完整写法：
+
+```go
+func (u User) TableName() string {
+	return "l_users"
+}
+```
+
+如果没有使用接收者变量，可以省略变量名：
+
+```go
+func (User) TableName() string {
+	return "l_users"
+}
+```
+
+GORM 会识别类似接口：
+
+```go
+type Tabler interface {
+	TableName() string
+}
+```
+
+Go 是隐式实现接口，只要 `User` 有 `TableName() string` 方法即可。
+
+## 自动迁移
+
+```go
+err := db.AutoMigrate(&User{})
+if err != nil {
+	panic(err)
+}
+```
+
+`AutoMigrate` 会自动创建表、添加新增字段，不会主动删除列；部分列类型或约束变更可能会处理，但复杂变更不要完全依赖它。开发阶段方便，生产环境需要更谨慎。
+
+## gorm.Model
+
+GORM 内置模型：
+
+```go
+type Model struct {
+	ID        uint `gorm:"primarykey"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+}
+```
+
+可以直接嵌入：
+
+```go
+type User struct {
+	gorm.Model
+	Name string
+}
+```
+
+`DeletedAt gorm.DeletedAt` 会开启软删除。
+
+```go
+db.Delete(&user)
+```
+
+普通删除实际是更新 `deleted_at`：
+
+```sql
+UPDATE l_users SET deleted_at = '2026-07-07 12:00:00' WHERE id = 1;
+```
+
+普通查询会自动过滤：
+
+```sql
+WHERE deleted_at IS NULL
+```
+
+物理删除：
+
+```go
+db.Unscoped().Delete(&user)
+```
+
+对应：
+
+```sql
+DELETE FROM l_users WHERE id = 1;
+```
+
+查询包含软删除的数据：
+
+```go
+db.Unscoped().Find(&users)
+```
+
+`DeletedAt` 加索引是因为查询经常带 `deleted_at IS NULL`。但单列索引不一定总是最优，实际业务常用联合索引：
+
+```sql
+(email, deleted_at)
+(user_id, deleted_at)
+```
+
+## time.Time
+
+```go
+CreatedAt time.Time
+UpdatedAt time.Time
+Birthday  *time.Time `gorm:"column:birthday;type:date"`
+```
+
+`time.Time` 不能表示 `NULL`，零值是：
+
+```text
+0001-01-01 00:00:00 +0000 UTC
+```
+
+允许为空一般使用：
+
+```go
+Birthday *time.Time
+```
+
+或者：
+
+```go
+Birthday sql.NullTime
+```
+
+多个时间字段：
+
+```go
+type User struct {
+	CreatedAt time.Time  // GORM 自动维护创建时间
+	UpdatedAt time.Time  // GORM 自动维护更新时间
+	Birthday  *time.Time `gorm:"type:date"`
+	LoginAt   *time.Time `gorm:"type:datetime"`
+	ExpireAt  *time.Time `gorm:"type:datetime(3)"`
+}
+```
+
+- `date`：只存日期。
+- `datetime`：日期和时间。
+- `datetime(3)`：保留毫秒。
+
+显示格式在输出时处理：
+
+```go
+fmt.Println(user.Birthday.Format("2006-01-02"))
+fmt.Println(user.LoginAt.Format("2006-01-02 15:04:05"))
+```
+
+Go 时间格式模板：
+
+```text
+2006-01-02 15:04:05
+```
+
+## 指针字段
+
+需要区分“没传/NULL”和“传了零值”时，用指针。
+
+```go
+Age int
+```
+
+普通 `int` 不能区分没传和 `0`。
+
+```go
+Age *int
+```
+
+可以区分：
+
+```text
+Age == nil  -> 没传 / NULL / 走默认值
+*Age == 0   -> 明确传入 0
+*Age == 18  -> 明确传入 18
+```
+
+常见指针字段：
+
+```go
+Age      *int
+NickName *string
+Birthday *time.Time
+ExpireAt *time.Time
+```
+
+常见非指针字段：
+
+```go
+ID        uint
+Name      string
+CreatedAt time.Time
+UpdatedAt time.Time
+```
+
+## 默认值
+
+```go
+Age *int `gorm:"column:age;type:int;default:18"`
+```
+
+创建时 `Age == nil`，通常不插入 `age` 字段，让数据库默认值生效。
+
+```go
+user := User{
+	Name:  "Tom",
+	Email: "tom@example.com",
+	Age:   nil,
+}
+
+db.Create(&user)
+```
+
+大致 SQL：
+
+```sql
+INSERT INTO l_users (name, email) VALUES ('Tom', 'tom@example.com');
+```
+
+数据库结果：
+
+```text
+age = 18
+```
+
+明确传入 `0`：
+
+```go
+age := 0
+
+user := User{
+	Name:  "Baby",
+	Email: "baby@example.com",
+	Age:   &age,
+}
+
+db.Create(&user)
+```
+
+数据库结果：
+
+```text
+age = 0
+```
+
+`default:18` 是数据库默认值，不是 Go 自动把 `nil` 改成 `18`。
+
+## 创建
+
+```go
+func createUser(db *gorm.DB) {
+	user := User{
+		Name:  "John Doe",
+		Email: "john.doe@example.com",
+	}
+
+	result := db.Create(&user)
+	if result.Error != nil {
+		fmt.Println("Error creating user:", result.Error)
+		return
+	}
+
+	fmt.Println("Create Successful, ID:", user.ID)
+}
+```
+
+创建成功后，自增 ID 会回填到 `user.ID`。
+
+## 查询
+
+```go
+func queryUser(db *gorm.DB) {
+	var user User
+
+	err := db.Where("email = ?", "john.doe@example.com").First(&user).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			fmt.Println("用户不存在")
+			return
+		}
+
+		fmt.Println("查询用户失败:", err)
+		return
+	}
+
+	fmt.Println("查询用户成功:", user)
+}
+```
+
+链式调用可以拆开理解：
+
+```go
+query := db.Where("email = ?", "john.doe@example.com")
+result := query.First(&user)
+err := result.Error
+```
+
+- `Where`：查询条件。
+- `First(&user)`：执行查询，并把结果写入 `user`。
+- `.Error`：取错误。
+
+由于有软删除字段，普通查询大致是：
+
+```sql
+SELECT * FROM l_users
+WHERE email = 'john.doe@example.com'
+  AND deleted_at IS NULL
+ORDER BY id
+LIMIT 1;
+```
+
+指针字段打印时可能是地址，需要解引用：
+
+```go
+if user.Age != nil {
+	fmt.Println("Age:", *user.Age)
+} else {
+	fmt.Println("Age: nil")
+}
+
+if user.Birthday != nil {
+	fmt.Println("Birthday:", user.Birthday.Format("2006-01-02"))
+} else {
+	fmt.Println("Birthday: nil")
+}
+```
+
+`Age` 有默认值，插入后通常不是 nil；`Birthday` 没有默认值，没传就是 NULL，查询回来就是 nil。
+
+## 更新
+
+查询时 `First(&user)` 已经能通过 `&user` 知道模型；更新 map 时只知道字段，不知道表，所以要指定 `Model`。
+
+```go
+var user User
+db.Where("email = ?", "tom@example.com").First(&user)
+```
+
+```go
+db.Model(&User{}).
+	Where("email = ?", "tom@example.com").
+	Updates(map[string]any{
+		"name": "Jerry",
+		"age":  22,
+	})
+```
+
+单字段更新：
+
+```go
+err := db.Model(&User{}).
+	Where("email = ?", "tom@example.com").
+	Update("age", 0).Error
+```
+
+多字段更新推荐 map，map 会按 key 更新，零值也会更新：
+
+```go
+err := db.Model(&User{}).
+	Where("email = ?", "tom@example.com").
+	Updates(map[string]any{
+		"name": "",
+		"age":  0,
+	}).Error
+```
+
+虽然模型里 `Age` 是 `*int`，但 map 更新写的是数据库列值，`"age": 22` 或 `"age": 0` 可以直接用 int。
+
+结构体更新默认跳过零值：
+
+```go
+err := db.Model(&User{}).
+	Where("email = ?", "tom@example.com").
+	Updates(User{
+		Name: "Jerry",
+	}).Error
+```
+
+结构体更新需要匹配字段类型，如果 `Age` 是 `*int`，要写 `Age: &age`。
+
+常见零值：
+
+```text
+int       -> 0
+string    -> ""
+bool      -> false
+pointer   -> nil
+time.Time -> 0001-01-01 00:00:00
+```
+
+例子：
+
+```go
+db.Model(&User{}).
+	Where("email = ?", "tom@example.com").
+	Updates(User{
+		Name: "",
+	})
+```
+
+`Name` 是空字符串，默认会被跳过。
+
+指针非 nil 时，即使指向 `0`，也会更新：
+
+```go
+age := 0
+
+db.Model(&User{}).
+	Where("email = ?", "tom@example.com").
+	Updates(User{
+		Age: &age,
+	})
+```
+
+使用 `Select` 可以让结构体更新零值，例如把 `Name` 更新为空字符串：
+
+```go
+db.Model(&User{}).
+	Where("email = ?", "tom@example.com").
+	Select("Name").
+	Updates(User{
+		Name: "",
+	})
+```
+
+多个字段：
+
+```go
+age := 0
+
+db.Model(&User{}).
+	Where("email = ?", "tom@example.com").
+	Select("Name", "Age").
+	Updates(User{
+		Name: "",
+		Age:  &age,
+	})
+```
+
+`Select("*")` 会让结构体所有字段参与更新，包括零值，容易误覆盖字段。
+
+```go
+age := 0
+
+db.Model(&User{}).
+	Where("email = ?", "tom@example.com").
+	Select("*").
+	Updates(User{
+		Age: &age,
+	})
+```
+
+实际开发更推荐精确字段：
+
+```go
+Select("Age")
+```
+
+而不是：
+
+```go
+Select("*")
+```
+
+## 更新 nil 和默认值
+
+```go
+db.Model(&User{}).
+	Where("email = ?", "john.doe@example.com").
+	Updates(map[string]any{
+		"age": nil,
+	})
+```
+
+这是把 `age` 更新为 `NULL`：
+
+```sql
+UPDATE l_users SET age = NULL WHERE email = 'john.doe@example.com';
+```
+
+不会触发 `default:18`。默认值只在插入时字段缺省才生效。
+
+更新成默认值可以直接写：
+
+```go
+db.Model(&User{}).
+	Where("email = ?", "john.doe@example.com").
+	Update("age", 18)
+```
+
+也可以用数据库 `DEFAULT`：
+
+```go
+db.Model(&User{}).
+	Where("email = ?", "john.doe@example.com").
+	Update("age", gorm.Expr("DEFAULT"))
+```
+
+## 实际开发建议
+
+单字段用 `Update`：
+
+```go
+db.Model(&User{}).
+	Where("email = ?", email).
+	Update("age", 0)
+```
+
+多字段局部更新用 map：
+
+```go
+db.Model(&User{}).
+	Where("email = ?", email).
+	Updates(map[string]any{
+		"name": name,
+		"age":  age,
+	})
+```
+
+接口请求使用 DTO 指针字段：
+
+```go
+type UpdateUserReq struct {
+	Name *string `json:"name"`
+	Age  *int    `json:"age"`
+}
+```
+
+动态组装 map：
+
+```go
+func UpdateUser(db *gorm.DB, email string, req UpdateUserReq) error {
+	updates := map[string]any{}
+
+	if req.Name != nil {
+		updates["name"] = *req.Name
+	}
+
+	if req.Age != nil {
+		updates["age"] = *req.Age
+	}
+
+	if len(updates) == 0 {
+		return nil
+	}
+
+	return db.Model(&User{}).
+		Where("email = ?", email).
+		Updates(updates).Error
+}
+```
+
+这样可以区分：
+
+```json
+{}
+```
+
+表示什么都不改。
+
+```json
+{"age":0}
+```
+
+表示明确把年龄改成 0。
+
+```json
+{"name":""}
+```
+
+表示明确把名字改成空字符串。
+
+## 完整练习代码
+
+```go
+package main
+
+import (
+	"errors"
+	"fmt"
+	"time"
+
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+)
+
+type User struct {
+	ID        uint           `gorm:"primaryKey"`
+	Name      string         `gorm:"column:name;type:varchar(32);not null"`
+	Email     string         `gorm:"column:email;type:varchar(100);uniqueIndex;not null"`
+	Age       *int           `gorm:"column:age;type:int;default:18"`
+	Birthday  *time.Time     `gorm:"column:birthday;type:date"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
+}
+
+func (User) TableName() string {
+	return "l_users"
+}
+
+func main() {
+	db, err := initDB()
+	if err != nil {
+		panic(err)
+	}
+
+	err = db.AutoMigrate(&User{})
+	if err != nil {
+		panic(err)
+	}
+
+	// 按需打开对应方法练习
+	createUser(db)
+	queryUser(db)
+	updateUser(db)
+}
+
+func initDB() (*gorm.DB, error) {
+	dsn := "root:mysql@(localhost:3306)/abc?charset=utf8mb4&parseTime=true&loc=Local"
+
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+
+	sqlDB.SetMaxOpenConns(20)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(time.Hour)
+
+	return db, nil
+}
+
+func createUser(db *gorm.DB) {
+	user := User{
+		Name:  "John Doe",
+		Email: "john.doe@example.com",
+	}
+
+	result := db.Create(&user)
+	if result.Error != nil {
+		fmt.Println("Error creating user:", result.Error)
+		return
+	}
+
+	fmt.Println("Create Successful, ID:", user.ID)
+}
+
+func queryUser(db *gorm.DB) {
+	var user User
+
+	err := db.Where("email = ?", "john.doe@example.com").First(&user).Error
+	/*
+	 * 这一段相当于：
+	 * query := db.Where("email = ?", "john.doe@example.com")
+	 * result := query.First(&user)
+	 * err := result.Error
+	 */
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			fmt.Println("用户不存在")
+			return
+		}
+
+		fmt.Println("Error querying user:", err)
+		return
+	}
+
+	fmt.Println("Query Successful")
+	fmt.Println("ID:", user.ID)
+	fmt.Println("Name:", user.Name)
+	fmt.Println("Email:", user.Email)
+
+	/*
+	 * 这里 Age、Birthday 虽然都是指针：
+	 * Age 有默认值 18，插入时没传也会由数据库填充，所以查询回来通常不是 nil。
+	 * Birthday 没有默认值，插入时没传就是 NULL，所以查询回来是 nil。
+	 */
+	if user.Age != nil {
+		fmt.Println("Age:", *user.Age)
+	} else {
+		fmt.Println("Age: nil")
+	}
+
+	if user.Birthday != nil {
+		fmt.Println("Birthday:", user.Birthday.Format("2006-01-02"))
+	} else {
+		fmt.Println("Birthday: nil")
+	}
+}
+
+func updateUser(db *gorm.DB) {
+	// 由于 Updates 使用的是 map，不知道对应哪个模型，所以要通过 db.Model() 指定表。
+	result := db.Model(&User{}).
+		Where("email = ?", "john.doe@example.com").
+		Updates(map[string]any{
+			"name": "Jerry",
+			"age":  22,
+		})
+	/*
+	 * 传结构体，但要记住结构体默认跳过零值；map 会按你写的字段更新。
+	 * 使用 Select，结构体形式可以更新零值。
+	 * 如果没有 Select，GORM 会猜测你要更新的字段，零值会被跳过。
+	 * 虽然模型里 Age 是 *int，但 map 更新写的是数据库列值，"age": 22 可以直接用 int。
+	 */
+
+	if result.Error != nil {
+		fmt.Println("Error updating user:", result.Error)
+		return
+	}
+
+	fmt.Println("Update Successful, RowsAffected:", result.RowsAffected)
+}
+```
+
+## 总结
+
+- `TableName()` 是方法，用于指定表名。
+- `CreatedAt`、`UpdatedAt` 会自动维护。
+- `DeletedAt` 会开启软删除。
+- 指针字段用于区分 `nil` 和零值。
+- map 更新会更新零值，结构体更新默认跳过零值。
+- `UPDATE age = nil` 是更新为 `NULL`，不会触发默认值。
