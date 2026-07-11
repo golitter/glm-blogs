@@ -155,3 +155,103 @@ case v := <-ch:
 | 取消原因 | `ctx.Err()` |
 
 > **核心理念**：ctx 放第一个参数、层层透传、下游监听 `ctx.Done()`、拿到 cancel 就 `defer cancel()`——这不是强杀，是协作退出。
+
+## `context.Context` 和 `gin.Context`
+
+名字都叫 Context，但它们不是一类东西：
+
+| 对象 | 来源 | 主要职责 |
+| ---- | ---- | ---- |
+| `context.Context` | Go 标准库 `context` 包 | 传递取消信号、超时截止时间、请求级元数据 |
+| `*gin.Context` | Gin 框架 | 处理 HTTP 参数、响应输出、路由信息、中间件链路 |
+
+一句话记：
+
+```text
+context.Context = 请求生命周期信号
+gin.Context     = Gin 的 HTTP 请求工具箱
+```
+
+`gin.Context` 常用于 handler 层：
+
+```go
+func (h *TodoHandler) Create(c *gin.Context) {
+    var req CreateTodoReq
+    if err := c.ShouldBindJSON(&req); err != nil {
+        c.JSON(400, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(200, gin.H{"message": "ok"})
+}
+```
+
+它能做的事情包括：
+
+- `c.Query("title")`：获取 query 参数
+- `c.Param("id")`：获取路径参数
+- `c.ShouldBindJSON(&req)`：绑定 JSON 请求体
+- `c.JSON(200, gin.H{})`：返回 JSON 响应
+- `c.Set()` / `c.Get()`：在 Gin 中间件链路里传值
+- `c.Next()` / `c.Abort()`：控制 Gin handler 链
+
+但 service / repository 层不应该接收 `*gin.Context`，否则业务层会和 Gin 框架强耦合。更推荐从 Gin 请求里取出标准库的 context：
+
+```go
+ctx := c.Request.Context()
+```
+
+然后把它作为第一个参数往下传：
+
+```go
+func (h *TodoHandler) Create(c *gin.Context) {
+    ctx := c.Request.Context()
+
+    todo, err := h.todoService.Create(ctx, userID, input)
+    if err != nil {
+        c.JSON(500, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(200, todo)
+}
+
+func (s *TodoService) Create(ctx context.Context, userID uint, input CreateTodoInput) (*model.Todo, error) {
+    return s.todoRepo.Create(ctx, todo)
+}
+
+func (r *TodoRepository) Create(ctx context.Context, todo *model.Todo) error {
+    return r.db.WithContext(ctx).Create(todo).Error
+}
+```
+
+`db.WithContext(ctx)` 的作用是让数据库操作尊重这次请求的生命周期：
+
+- 客户端断开连接时，下游数据库操作有机会取消
+- 请求超时时，SQL 不必继续无意义地执行
+- 日志、链路追踪、request_id 等元数据可以继续向下传递
+- 服务优雅关闭时，长耗时操作更容易退出
+
+企业项目里常见分层约定：
+
+```text
+handler     使用 *gin.Context，负责 HTTP 入参和响应
+service     使用 context.Context，负责业务逻辑
+repository  使用 context.Context，负责数据库访问
+```
+
+也就是：
+
+```text
+Gin Handler
+  ↓ c.Request.Context()
+Service(ctx, ...)
+  ↓
+Repository(ctx, ...)
+  ↓ db.WithContext(ctx)
+DB / RPC / 下游服务
+```
+
+> 不要把 `*gin.Context` 直接传进 service / repository。它属于 HTTP 框架层，而且 Gin 的 Context 会被复用；业务层应该只依赖标准库的 `context.Context` 和普通业务参数。
+
+如果要在 goroutine 里使用 Gin 相关数据，也不要直接长期持有原始 `*gin.Context`。需要 Gin 上下文时先 `c.Copy()`，但更推荐提前取出必要的普通值和 `c.Request.Context()` 再传入 goroutine。
