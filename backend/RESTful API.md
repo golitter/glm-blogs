@@ -17,7 +17,7 @@ REST（英文：Representational State Transfer，简称REST，表现层状态�
 | PATCH     | UPDATE   | 在服务器更新资源（客户端提供需要修改的资源数据） |
 | DELETE    | DELETE   | 从服务器删除资源                                 |
 
-RESTfull和传统API大致架构：
+RESTful 和传统 API 大致架构：
 
 ![img](https://pic4.zhimg.com/v2-4c87f23be230fdf16dc99398781ebb1b_1440w.jpg)
 
@@ -137,6 +137,20 @@ RESTful 里经常会提到两个概念：**安全性** 和 **幂等性**。
 | `3xx`  | 重定向     | 需要进一步操作       |
 | `4xx`  | 客户端错误 | 请求有问题           |
 | `5xx`  | 服务端错误 | 服务器处理失败       |
+
+常用状态码如下：
+
+| 状态码 | 含义 | 常见场景 |
+| ------ | ---- | -------- |
+| `200 OK` | 请求成功 | 查询、更新成功并返回数据 |
+| `201 Created` | 创建成功 | `POST` 创建资源成功 |
+| `204 No Content` | 成功但无响应体 | `DELETE` 删除成功，或更新成功但不返回数据 |
+| `400 Bad Request` | 请求参数错误 | 参数格式错误、JSON 格式错误 |
+| `401 Unauthorized` | 未认证 | 未登录、token 缺失或 token 无效 |
+| `403 Forbidden` | 无权限 | 已认证，但没有访问该资源的权限 |
+| `404 Not Found` | 资源不存在 | 请求的用户、文章、订单等不存在 |
+| `422 Unprocessable Entity` | 语义校验失败 | 参数格式正确，但业务校验不通过 |
+| `500 Internal Server Error` | 服务器内部错误 | 服务端出现未预期异常 |
 
 **返回数据设计**
 
