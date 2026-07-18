@@ -67,6 +67,12 @@ Harness的核心组件：
 
 
 
+> [关于Agent Harness，我整理了一个最小版！](https://mp.weixin.qq.com/s/yVFQej3dFk9KHv6J2u6Lew)
+>
+> mini harness：至少包括**任务输入、执行环境、可调用工具、trace链路追踪、评分器**。
+>
+> 一个agent里面可以有多个harness，例如编程harness、浏览器harness、笔记harness等。
+
 Anthropic提出“Harness随时可抛弃”的观点：现在Harness本质傻姑娘是补偿大模型缺陷的“拐杖”，但是随着模型能力提升，这些曾经的解法必定会成为agent累赘。因此，不能把当下控制流写死在系统中，而应该将harness设计为轻量、可替换的抽象层，只在架构中沉淀业务规则与安全边界这些“不变量”，保持对底层执行引擎随时“换拐杖”甚至“扔拐杖”的解耦能力。
 
 
