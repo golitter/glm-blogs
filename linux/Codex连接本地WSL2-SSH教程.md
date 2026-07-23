@@ -223,3 +223,36 @@ sudo systemctl restart ssh
 ```
 
 私钥`id_ed25519_wsl`保存好，别传GitHub或网盘公开链接。
+
+## 可选：解决 VPN/代理与 WSL2 的网络兼容问题
+
+如果你开着 VPN 或本地代理（Clash、v2rayN 等）后发现 WSL2 连不上网，或代理不生效，通常不是 VPN 本身坏了，而是 WSL2 默认运行在独立的 NAT 虚拟网络中。它和 Windows 不是同一个网络命名空间，因此会出现以下情况：
+
+- Windows 上代理监听 `127.0.0.1:7890`，但 WSL2 里的 `127.0.0.1` 指向 Linux 自己。
+- VPN 修改了 Windows 路由，但没有正确覆盖 WSL2 的虚拟网卡/NAT。
+- VPN 下发的企业 DNS、NRPT 规则没有传递给 WSL2。
+- Clash、v2rayN 等只监听本机，不允许来自 WSL 虚拟网段的连接。
+- Windows 防火墙或 VPN 客户端阻止了 WSL 虚拟网卡流量。
+
+### 推荐解决方案：镜像网络
+
+Windows 11 22H2 以上，可以编辑 Windows 用户目录中的 `%UserProfile%\.wslconfig`：
+
+```text
+[wsl2]
+networkingMode=mirrored
+dnsTunneling=true
+autoProxy=true
+```
+
+然后在 PowerShell 执行：
+
+```shell
+wsl --shutdown
+```
+
+重新启动 WSL。镜像模式允许 WSL 使用 Windows 的网络接口，并改善 VPN 兼容性；此时通常也可以从 WSL 直接访问 Windows 的 `127.0.0.1` 代理。
+
+> 参考：[微软 WSL 网络文档](https://learn.microsoft.com/zh-cn/windows/wsl/networking)、[微软 WSL 故障排查](https://learn.microsoft.com/zh-cn/windows/wsl/troubleshooting)。
+
+### 如果继续使用默认 NAT 模式
