@@ -5,30 +5,30 @@ export function RecentUpdates() {
   const latestFiles = recentFiles.slice(0, 5);
 
   return (
-    <Card className="animate-fade-in-up" style={{ animationDelay: "80ms" }}>
-      <CardHeader className="pb-3">
-        <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-faint">Latest</p>
-        <CardTitle className="mt-1">最近更新</CardTitle>
+    <Card className="animate-fade-in-up overflow-hidden bg-surface" style={{ animationDelay: "80ms" }}>
+      <CardHeader className="border-b-[3px] border-ink bg-primary pb-4 text-white">
+        <p className="font-mono text-[10px] font-black tracking-[0.2em] text-white">最近发布</p>
+        <CardTitle className="mt-1 text-white">最近更新</CardTitle>
       </CardHeader>
-      <CardContent className="grid">
+      <CardContent className="grid p-0">
         {latestFiles.map((file, index) => (
           <a
             key={`${file.path}-${file.date}`}
-            className="group flex items-start gap-3 border-line py-3 no-underline transition-colors first:border-t-0 [&+&]:border-t"
+            className="group flex items-start gap-3 border-line p-4 no-underline transition-colors hover:bg-sun [&+&]:border-t-2"
             href={file.url}
             target="_blank"
             rel="noreferrer"
           >
-            <span className="mt-0.5 w-5 shrink-0 font-mono text-[11px] tabular-nums text-ink-faint">
+            <span className="mt-0.5 flex h-6 w-7 shrink-0 items-center justify-center border-2 border-ink bg-signal font-mono text-[10px] font-black tabular-nums text-white">
               {String(index + 1).padStart(2, "0")}
             </span>
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-2">
-                <span className="block text-balance text-[14px] font-semibold leading-snug text-ink transition-colors group-hover:text-ink-soft">
+                <span className="block text-balance text-[14px] font-black leading-snug text-ink">
                   {file.title}
                 </span>
                 {index === 0 ? (
-                  <span className="rounded-[3px] bg-tag-sage-bg px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-wider text-tag-sage-ink">
+                  <span className="border border-ink bg-mint px-1.5 py-px font-mono text-[9px] font-black uppercase tracking-wider text-ink">
                     New
                   </span>
                 ) : null}

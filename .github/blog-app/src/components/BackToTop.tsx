@@ -18,7 +18,7 @@ export function BackToTop() {
     <Button
       variant="default"
       className={cn(
-        "fixed bottom-6 right-6 z-20 h-10 w-10 rounded-full p-0 shadow-lift ring-1 ring-ink/10 transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] active:scale-90 max-[560px]:bottom-4 max-[560px]:right-4 max-[560px]:h-9 max-[560px]:w-9",
+        "fixed bottom-6 right-6 z-20 h-11 w-11 bg-signal p-0 text-white shadow-lift transition-[opacity,transform] duration-200 active:translate-x-2 active:translate-y-2 active:shadow-none max-[560px]:bottom-4 max-[560px]:right-4 max-[560px]:h-10 max-[560px]:w-10",
         show ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0",
       )}
       aria-label="回到顶部"

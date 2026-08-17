@@ -12,33 +12,33 @@ function App() {
     <div className="min-h-screen bg-canvas text-ink">
       <a
         href="#main"
-        className="sr-only rounded-md focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-30 focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-ink focus:shadow-lift"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-30 focus:border-2 focus:border-ink focus:bg-sun focus:px-3 focus:py-2 focus:text-sm focus:font-black focus:text-ink focus:shadow-soft"
       >
         跳到主要内容
       </a>
 
       <SiteHeader />
 
-      <div className="mx-auto w-full max-w-[1240px] px-6 py-10 max-[1120px]:py-7">
-        <div className="grid grid-cols-[224px_minmax(0,1fr)_248px] items-start gap-6 max-[1120px]:grid-cols-1">
-          <aside className="sticky top-20 max-[1120px]:order-2 max-[1120px]:static max-[1120px]:top-auto">
+      <div className="mx-auto w-full max-w-[1320px] px-6 py-10 max-[1120px]:py-7 max-[560px]:px-4">
+        <div className="grid grid-cols-[224px_minmax(0,1fr)_248px] items-start gap-7 max-[1120px]:grid-cols-1">
+          <aside className="sticky top-24 max-[1120px]:order-2 max-[1120px]:static max-[1120px]:top-auto max-[760px]:hidden">
             <AboutCard />
           </aside>
 
           <main id="main" className="w-full max-[1120px]:order-1">
-            <h1 className="sr-only">Golemon Blogs — 技术博客导航</h1>
+            <h1 className="sr-only">Golemon Blogs 技术笔记</h1>
 
             <section className="mb-6">
               <SearchBar />
             </section>
 
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,320px)] items-start gap-6 max-[1120px]:grid-cols-1">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,320px)] items-start gap-7 max-[1120px]:grid-cols-1">
               <CategoryTree />
               <RecentUpdates />
             </div>
           </main>
 
-          <aside className="sticky top-20 max-[1120px]:order-3 max-[1120px]:static max-[1120px]:top-auto">
+          <aside className="sticky top-24 max-[1120px]:order-3 max-[1120px]:static max-[1120px]:top-auto max-[760px]:hidden">
             <SearchTips />
           </aside>
         </div>

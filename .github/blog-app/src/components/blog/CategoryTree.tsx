@@ -27,13 +27,13 @@ export function CategoryTree() {
   }
 
   return (
-    <Card className="animate-fade-in-up">
-      <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
+    <Card className="animate-fade-in-up overflow-hidden">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b-[3px] border-ink bg-mint pb-4">
         <div>
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-faint">Contents</p>
+          <p className="font-mono text-[10px] font-black tracking-[0.2em] text-ink">文章分类</p>
           <CardTitle className="mt-1">
             <a className="no-underline hover:text-ink-soft" href={REPO_URL} target="_blank" rel="noreferrer">
-              目录
+              知识目录
             </a>
           </CardTitle>
         </div>
@@ -41,7 +41,7 @@ export function CategoryTree() {
           全部折叠
         </Button>
       </CardHeader>
-      <CardContent className="grid gap-0.5">
+      <CardContent className="grid gap-2 p-5">
         {blogTree.map((node, index) => (
           <CategoryNode
             key={node.path}
