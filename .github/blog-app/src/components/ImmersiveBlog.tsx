@@ -119,6 +119,6 @@ export function ImmersiveBlog() {
     <div className="search-actions"><button type="button" onClick={closeSearch}>取消</button><button type="button" onClick={submit}>在书页中查看</button></div></form></div></div>
     {random && <aside className="random-card" role="dialog" aria-label="随机探索"><small>今天翻到这一篇</small><h2>{random.title}</h2><p>{random.path}</p><a href={random.url} target="_blank" rel="noreferrer" onClick={() => setRandom(null)}>前往 GitHub 阅读 ↗</a><button onClick={explore}>再抽一篇</button><button onClick={() => setRandom(null)}>收起</button></aside>}
     <a className="accessible-directory" href="./directory.html">完整文章目录（无需三维渲染）</a>
-    <div className={`build-stamp ${awake ? "" : "is-idle"}`}><span>最后更新 {BUILD_TIME}（中国时间）</span><span>主要由 GPT6 Astra 完成</span></div>
+    <div className={`build-stamp ${awake ? "" : "is-idle"}`}><span>最后更新 {BUILD_TIME}（中国时间）</span></div>
   </main>;
 }
