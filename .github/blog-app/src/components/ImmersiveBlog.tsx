@@ -65,6 +65,11 @@ export function ImmersiveBlog() {
     warmSearch().then(() => setSearchReady(true)).catch(() => {});
   }, [ready, simple]);
   useEffect(() => {
+    // A 3D search panel opened before warming finished shows plain-substring fallback results
+    // (no pinyin/initials matches); rebuild it once the full index is available.
+    if (searchReady && !simple && route.view === "search") api.current?.setQuery(route.q ?? "");
+  }, [searchReady]);
+  useEffect(() => {
     if (simple || !host.current) return;
     const element = host.current; let cancelled = false; setReady(false); setError(false);
     sceneModule.then(({createImmersiveBlog}) => {

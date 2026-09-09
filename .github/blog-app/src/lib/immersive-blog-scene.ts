@@ -148,9 +148,11 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   // Identical parameter sets repeat throughout the room (boards, seams, book stripes, pots), so
   // geometries are cached by key instead of rebuilt for every mesh.
   const geometryCache = new Map<string, THREE.BufferGeometry>();
+  // Cached geometries are shared and outlive individual panels; clearPanel must not dispose them.
+  const sharedGeometries = new Set<THREE.BufferGeometry>();
   function cached<T extends THREE.BufferGeometry>(key: string, build: () => T) {
     let geometry = geometryCache.get(key) as T | undefined;
-    if (!geometry) geometryCache.set(key, geometry = build());
+    if (!geometry) { geometry = build(); geometryCache.set(key, geometry); sharedGeometries.add(geometry); }
     return geometry;
   }
   function rounded(parent: THREE.Object3D, size: [number, number, number], position: [number, number, number], color: number, radius = 0.12) {
@@ -567,7 +569,11 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       if (record) record.basePosition.copy(row.group.position);
       row.group.visible = row.group.position.y + row.halfHeight >= listBottom && row.group.position.y - row.halfHeight <= listTop;
     }
-    if (scrollThumb) scrollThumb.position.y = listTop - .35 - (scrollLimit ? panelScroll / scrollLimit : 0) * (listTop - listBottom - .7);
+    if (scrollThumb) {
+      scrollThumb.position.y = listTop - .35 - (scrollLimit ? panelScroll / scrollLimit : 0) * (listTop - listBottom - .7);
+      // The thumb casts a shadow, so moving it must refresh the on-demand shadow map.
+      renderer.shadowMap.needsUpdate = true;
+    }
     renderer.domElement.setAttribute("aria-label", `${panelTitle}，${panelFiles.length} 项，可上下滚动，滚动进度 ${scrollLimit ? Math.round(panelScroll / scrollLimit * 100) : 100}%。Escape 返回。`);
   }
   function clearPanel() {
@@ -581,7 +587,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     panelInteractives.clear();
     panel.traverse((object) => {
       if (!(object instanceof THREE.Mesh)) return;
-      object.geometry.dispose();
+      if (!sharedGeometries.has(object.geometry)) object.geometry.dispose();
       const texture = object.userData.textTexture as THREE.Texture | undefined;
       if (texture) {
         texture.dispose();
@@ -793,9 +799,11 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     if (dragged) options.onInteraction();
     pressed = null;
     activePointer = null;
+    // The orbit-drag branch set "grabbing"; no hover re-test is scheduled without movement, so restore here.
+    renderer.domElement.style.cursor = hovered ? "pointer" : "grab";
     if (renderer.domElement.hasPointerCapture(event.pointerId)) renderer.domElement.releasePointerCapture(event.pointerId);
   }
-  function onPointerCancel() { activePointer = null; pressed = null; dragged = true; }
+  function onPointerCancel() { activePointer = null; pressed = null; dragged = true; renderer.domElement.style.cursor = "grab"; }
   function onWheel(event: WheelEvent) {
     lastActivity = performance.now(); options.onInteraction();
     if (!panel.visible) return;
