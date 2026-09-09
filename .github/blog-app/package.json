@@ -7,17 +7,13 @@
     "dev": "vite --host 127.0.0.1",
     "prebuild": "node scripts/generate-data.mjs",
     "build": "tsc --noEmit && vite build",
+    "test": "node --test scripts/experience.test.mjs scripts/shelf-layout.test.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
-    "@radix-ui/react-slot": "^1.2.3",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^0.468.0",
     "pinyin-pro": "^3.29.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.6.0",
     "three": "^0.185.1"
   },
   "devDependencies": {

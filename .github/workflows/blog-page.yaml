@@ -55,6 +55,12 @@ jobs:
         working-directory: .github/blog-app
         run: pnpm install --frozen-lockfile
 
+      - name: Test blog page
+        working-directory: .github/blog-app
+        run: |
+          python3 scripts/generate-blog-data.py
+          pnpm test
+
       - name: Build blog page
         working-directory: .github/blog-app
         run: |

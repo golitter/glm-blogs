@@ -4,7 +4,7 @@
 
 ## 这是什么
 
-Golemon Blogs 的前端：一个 React + Vite 单页应用，扫描整个仓库的 Markdown，渲染成**目录树 + 最近更新 + 搜索**的导航站，部署到 GitHub Pages。**页面内容来自生成的数据，不是写死的。**
+Golemon Blogs 的前端：一个 React + Vite 单页应用，扫描整个仓库的 Markdown，渲染成**全屏 Three.js 三维书房**（分类书架 + 最近更新板 + 三维搜索书页 + 简洁博客降级），部署到 GitHub Pages。**页面内容来自生成的数据，不是写死的。**
 
 ## 红线（动手前必读）
 
@@ -42,14 +42,16 @@ Golemon Blogs 的前端：一个 React + Vite 单页应用，扫描整个仓库�
 
 | 文件 | 职责 |
 |---|---|
-| `scripts/generate-blog-data.py` | 扫描 md、生成数据、可见性规则（改内容逻辑改这里） |
+| `scripts/generate-blog-data.py` | 扫描 md、生成数据、可见性规则、产出无脚本目录 `public/directory.html`（改内容逻辑改这里） |
 | `src/generated/blog-data.ts` | 生成产物，勿手改 |
-| `src/App.tsx` | 三栏布局骨架 |
-| `src/index.css` | `@theme` 设计 token（配色 / 字体 / 阴影），改 token 全站联动 |
-| `src/components/blog/` | CategoryTree / CategoryNode / SearchBar / RecentUpdates |
-| `src/components/layout/` | SiteHeader / SiteFooter |
-| `src/components/sidebar/` | AboutCard / SearchTips |
-| `src/lib/` | constants（链接）/ category-style（分类配色）/ utils（cn） |
+| `src/App.tsx` | 入口，直接渲染 `ImmersiveBlog` |
+| `src/components/ImmersiveBlog.tsx` | 三维博客的 React 壳：顶部快捷导航、搜索窗口（原生输入 + IME 支持）、画质设置、首次引导、随便看看、简洁博客降级 |
+| `src/components/SearchNotebook.tsx` | 搜索窗口的 WebGL 手账封皮（按需加载） |
+| `src/lib/immersive-blog-scene.ts` | Three.js 主场景：书房、分类书架、更新板、射线交互、镜头飞行、滚动书页面板、资源回收 |
+| `src/lib/blog-experience.ts` | 搜索（标题 / 路径 / 拼音 / 首字母）、hash 路由编解码、localStorage 读写、NEW 判定 |
+| `src/lib/shelf-layout.ts` | 书架排布纯函数（每排 5 本，分类变多向上加层） |
+| `src/lib/constants.ts` | GitHub / CSDN 链接 |
+| `src/index.css` | 设计 token 与全站样式 |
 | `vite.config.ts` | `base: "./"`（相对路径，GitHub Pages 子路径兼容） |
 
 ## 常见任务
@@ -58,9 +60,10 @@ Golemon Blogs 的前端：一个 React + Vite 单页应用，扫描整个仓库�
 |---|---|
 | 隐藏某个目录 / 文件 | 改 `EXCLUDED_PATHS`，重跑 python |
 | 某目录只展示指定 md | 改 `INCLUDE_ONLY`，重跑 python |
-| 改配色 / 字体 / 氛围 | 改 `src/index.css` 的 `@theme` token |
-| 改「最近更新」条数 | 同时改 `RecentUpdates.tsx` 的 `slice(0, N)` **和** python 的 `len(rows) >= N` |
-| 加导航 / 账号链接 | `layout/SiteHeader.tsx` 或 `sidebar/AboutCard.tsx` + `lib/constants.ts` |
+| 改页面配色 / 字体 | HTML 层改 `src/index.css`；三维场景内物体配色改 `immersive-blog-scene.ts` 顶部的 `PALETTE` |
+| 改「最近更新」条数 | 同时改 `immersive-blog-scene.ts` 里的 `recentFiles.slice(0, N)` **和** python 的 `len(rows) >= N` |
+| 加顶部导航按钮 | `ImmersiveBlog.tsx` 里 `floating-nav` 一行 |
+| 加场景内可点击入口（如账号卡片） | `immersive-blog-scene.ts` 建 mesh 后包一层 `interactive(...)`；外链放 `lib/constants.ts` |
 
 ## 改动检查清单
 

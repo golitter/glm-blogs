@@ -168,7 +168,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     item.scale.set(...scale);
     return item;
   }
-  function textPlane(text: string, width: number, height: number, options: { color?: string; size?: number; weight?: number; align?: CanvasTextAlign; background?: string; border?: string; emphasis?: string } = {}) {
+  function textPlane(text: string, width: number, height: number, options: { color?: string; weight?: number; align?: CanvasTextAlign; background?: string; border?: string; emphasis?: string } = {}) {
     const canvas = document.createElement("canvas");
     // Texture density tracks the plane's on-screen size; small labels skip the full 1024-wide canvas.
     canvas.width = Math.max(256, Math.min(1024, Math.round(1024 * width / 9.8)));
@@ -343,7 +343,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
 
   // World title and fully 3D navigation plaques.
   const titleBoard = rounded(world, [10.8, 2.1, .35], [0, Math.max(11.7, cabinet.height + 1.8), -5.4], PALETTE.paper, .18);
-  const title = textPlane("Golemon Blogs", 9.8, 1.05, { size: 56, weight: 700, color: "#566d43" });
+  const title = textPlane("Golemon Blogs", 9.8, 1.05, { weight: 700, color: "#566d43" });
   title.position.set(0, .4, .19);
   titleBoard.add(title);
   const backTitle = textPlane("Golemon Blogs", 9.8, 1.05, {weight: 700, color: "#566d43"});
@@ -438,10 +438,10 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     rounded(group, [1.08, .16, .69], [0, -.77, .01], PALETTE.gold, .03);
     // Long English category names get two lines on the cloth cover.
     const bookName = node.name.length > 8 ? node.name.replace(/[-_]/g, "\n") : node.name;
-    const name = textPlane(bookName, 1.08, .75, { size: 42, weight: 700, color: "#4f4a3f" });
+    const name = textPlane(bookName, 1.08, .75, { weight: 700, color: "#4f4a3f" });
     name.position.set(0, .12, .34);
     group.add(name);
-    const count = textPlane(`${node.count} 篇`, .9, .35, { size: 35, weight: 500, color: "#75694f" });
+    const count = textPlane(`${node.count} 篇`, .9, .35, { weight: 500, color: "#75694f" });
     count.position.set(0, -.52, .35);
     group.add(count);
     interactive(group, () => { directoryStack.length = 0; openDirectory(node); });
@@ -458,7 +458,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   for (const x of [-2.8, 2.8]) rounded(board, [.25, 7, .22], [x, 3.6, -1.03], 0xa48c66, .04);
   const backBrace = rounded(board, [6.6, .23, .2], [0, 3.6, -1.15], 0xb7a178, .04);
   backBrace.rotation.z = .65;
-  const updateHeader = textPlane("最近更新 · NEW NOTES", 6.7, .7, { size: 45, weight: 700, color: "#75654b" });
+  const updateHeader = textPlane("最近更新 · NEW NOTES", 6.7, .7, { weight: 700, color: "#75654b" });
   updateHeader.position.set(0, 6.85, -.08);
   board.add(updateHeader);
   recentFiles.slice(0, 5).forEach((file, index) => {
@@ -468,11 +468,11 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     board.add(group);
     rounded(group, [6.75, .92, .18], [0, 0, 0], index === 0 ? 0xf3e4b8 : PALETTE.paper, .12);
     sphere(group, [-2.95, 0, .13], [.19, .19, .08], index === 0 ? PALETTE.sage : PALETTE.blush);
-    const label = textPlane(`${String(index + 1).padStart(2, "0")}  ${file.title}`, 4.9, .48, { size: 41, weight: 600, align: "left" });
+    const label = textPlane(`${String(index + 1).padStart(2, "0")}  ${file.title}`, 4.9, .48, { weight: 600, align: "left" });
     label.position.set(-.15, .13, .11);
     group.add(label);
     const info = updateInfo(file);
-    const date = textPlane(`${info.bucket} · ${info.relative} · ${file.change === "added" ? "新增" : "修改"}${info.isNew ? " · NEW" : ""}`, 5.7, .28, { size: 31, weight: 400, align: "left", color: "#8a806d" });
+    const date = textPlane(`${info.bucket} · ${info.relative} · ${file.change === "added" ? "新增" : "修改"}${info.isNew ? " · NEW" : ""}`, 5.7, .28, { weight: 400, align: "left", color: "#8a806d" });
     date.position.set(.15, -.25, .115);
     group.add(date);
     interactive(group, () => window.open(file.url, "_blank", "noopener,noreferrer"));
@@ -513,7 +513,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   searchConsole.rotation.x = -.2;
   desk.add(searchConsole);
   rounded(searchConsole, [4.8, 1.2, .34], [0, 0, 0], PALETTE.sage, .2);
-  const searchLabel = textPlane("⌕  点击搜索全部笔记", 4.25, .72, { size: 48, weight: 600, background: "#faffee", border: "#d7e2bf" });
+  const searchLabel = textPlane("⌕  点击搜索全部笔记", 4.25, .72, { weight: 600, background: "#faffee", border: "#d7e2bf" });
   searchLabel.position.z = .2;
   searchConsole.add(searchLabel);
   interactive(searchConsole, () => { directoryStack.length = 0; showSearch(searchQuery); options.onSearchRequest(); });
@@ -523,7 +523,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   profile.rotation.y = -.2;
   desk.add(profile);
   rounded(profile, [2.15, 2.5, .28], [0, 0, 0], PALETTE.blush, .16);
-  const profileText = textPlane("GOLEMON\nGitHub", 1.8, .85, { size: 43, weight: 700, color: "#66564b", background: "#fff8ed" });
+  const profileText = textPlane("GOLEMON\nGitHub", 1.8, .85, { weight: 700, color: "#66564b", background: "#fff8ed" });
   profileText.position.z = .16;
   profile.add(profileText);
   interactive(profile, () => window.open(PROFILE_URL, "_blank", "noopener,noreferrer"));
@@ -620,7 +620,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     group.position.set(x, y, .55);
     parent.add(group);
     rounded(group, [width, .68, .22], [0, 0, 0], PALETTE.sageDark, .16);
-    const text = textPlane(label, width - .2, .42, { size: 43, weight: 600, color: "#fffdf5" });
+    const text = textPlane(label, width - .2, .42, { weight: 600, color: "#fffdf5" });
     text.position.z = .13;
     group.add(text);
     interactive(group, action, true);
@@ -648,7 +648,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       rightPage.rotation.y = -.035;
       rounded(panel, [.28, 8.05, .48], [0, 0, .34], PALETTE.gold, .06);
     }
-    const heading = textPlane(`${titleText} · ${files.length} 项`, portrait ? 5.15 : 6.1, .7, { size: 51, weight: 700, color: "#61754c" });
+    const heading = textPlane(`${titleText} · ${files.length} 项`, portrait ? 5.15 : 6.1, .7, { weight: 700, color: "#61754c" });
     heading.position.set(portrait ? -.45 : -3.55, portrait ? 4.25 : 3.55, .61);
     panel.add(heading);
     const hint = textPlane("上下滑动查阅", portrait ? 1.5 : 3, .36, {color: "#8c7a5b"});
@@ -683,7 +683,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       scrollRows.push({group, y: group.position.y, halfHeight: rowHeight / 2});
       panel.add(group);
       rounded(group, [portrait ? 6.15 : 6.25, portrait ? 1.08 : .92, .16], [0, 0, 0], index % 2 ? 0xf7f2e4 : 0xeef3e2, .12);
-      const rowText = textPlane(`${index + 1}. ${file.title}`, portrait ? 5.55 : 5.65, .5, { size: portrait ? 43 : 39, weight: 600, align: "left" });
+      const rowText = textPlane(`${index + 1}. ${file.title}`, portrait ? 5.55 : 5.65, .5, { weight: 600, align: "left" });
       rowText.position.z = .1;
       group.add(rowText);
       group.traverse(object => {

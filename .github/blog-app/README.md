@@ -6,7 +6,7 @@ Golemon Blogs 的前端站点。扫描仓库里的 Markdown，生成一个**目�
 
 ## 技术栈
 
-React 19 · Vite 8 · TypeScript · Tailwind CSS v4 · shadcn/ui 风格基础组件 · lucide-react · Three.js · pnpm
+React 19 · Vite 8 · TypeScript · Tailwind CSS v4 · Three.js · pnpm
 
 ## 快速开始
 
@@ -34,16 +34,22 @@ pnpm build          # = prebuild(自动跑 python 生成数据) + tsc --noEmit +
 ## 目录结构
 
 ```
-scripts/generate-blog-data.py   扫描 *.md → 生成数据（可见性规则在这里配）
+scripts/generate-blog-data.py   扫描 *.md → 生成数据（可见性规则在这里配），并产出无脚本目录 public/directory.html
 src/
-  App.tsx                        云端首屏 + 笔记内容 + 个人资料布局
-  main.tsx                       入口
-  index.css                      设计 token（@theme：配色/字体/阴影）
+  App.tsx                        入口，渲染 ImmersiveBlog
+  main.tsx                       挂载入口
+  index.css                      设计 token 与全站样式
   generated/blog-data.ts         ⛔ 自动生成，勿手改
-  components/                     ui / layout / blog / sidebar
-  lib/                            constants / category-style / utils
+  components/ImmersiveBlog.tsx   三维博客的 React 壳（导航 / 搜索 / 画质 / 简洁降级）
+  components/SearchNotebook.tsx  搜索窗口的 WebGL 封皮
+  lib/immersive-blog-scene.ts    Three.js 主场景（书房 / 书架 / 更新板 / 书页面板）
+  lib/blog-experience.ts         搜索（拼音/首字母）、hash 路由、NEW 判定
+  lib/shelf-layout.ts            书架排布纯函数
+  lib/constants.ts               外部链接
 vite.config.ts                   base: "./"（相对路径，兼容 GitHub Pages 子路径）
 ```
+
+架构、关键文件与常见任务的完整对照见 [AGENTS.md](AGENTS.md)。
 
 ## 内容从哪来
 
