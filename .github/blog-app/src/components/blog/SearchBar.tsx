@@ -19,23 +19,21 @@ export function SearchBar() {
   }, []);
 
   function performSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmed = query.trim();
-    if (!trimmed) return;
-
-    const repoQuery = `repo:golitter/glm-blogs ${trimmed}`;
-    window.open(`https://github.com/search?q=${encodeURIComponent(repoQuery)}&type=code`, "_blank");
+    if (!query.trim()) event.preventDefault();
   }
 
   return (
-    <form onSubmit={performSearch} className="group">
-      <div className="flex h-14 items-center gap-3 border-[3px] border-line bg-primary px-3.5 shadow-soft transition-transform focus-within:-translate-y-0.5 focus-within:shadow-lift">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-ink bg-sun">
+    <form action="https://github.com/search" method="get" target="_blank" rel="noopener noreferrer" onSubmit={performSearch} className="group search-form">
+      <input type="hidden" name="q" value={`repo:golitter/glm-blogs ${query.trim()}`} />
+      <input type="hidden" name="type" value="code" />
+      <div className="rounded-2xl flex h-16 items-center gap-3 border border-line bg-surface px-3.5 shadow-soft transition-transform focus-within:-translate-y-0.5 focus-within:shadow-lift">
+        <span className="rounded-full flex h-8 w-8 shrink-0 items-center justify-center border border-line bg-sun">
           <Search className="h-4 w-4 text-ink" aria-hidden />
         </span>
         <input
           ref={inputRef}
-          className="peer h-full w-full bg-transparent text-[15px] font-bold text-white outline-none placeholder:text-white"
+          type="search"
+          className="peer h-full w-full bg-transparent text-[15px] font-normal text-ink outline-none placeholder:text-ink-muted"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="搜索笔记，例如 qwen、agent"

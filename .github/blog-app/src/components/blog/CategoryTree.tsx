@@ -3,6 +3,7 @@ import { useState } from "react";
 import { CategoryNode } from "@/components/blog/CategoryNode";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { TiltSurface } from "@/components/ui/tilt-surface";
 import { blogTree } from "@/generated/blog-data";
 import { toneFor } from "@/lib/category-style";
 import { REPO_URL } from "@/lib/constants";
@@ -27,10 +28,11 @@ export function CategoryTree() {
   }
 
   return (
-    <Card className="animate-fade-in-up overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b-[3px] border-ink bg-mint pb-4">
+    <TiltSurface className="category-volume" strength={4}>
+    <Card className="animate-fade-in-up overflow-hidden three-d-card">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 border-b border-line bg-mint pb-4">
         <div>
-          <p className="font-mono text-[10px] font-black tracking-[0.2em] text-ink">文章分类</p>
+          <p className="font-mono text-[10px] font-semibold tracking-[0.2em] text-ink">文章分类</p>
           <CardTitle className="mt-1">
             <a className="no-underline hover:text-ink-soft" href={REPO_URL} target="_blank" rel="noreferrer">
               知识目录
@@ -53,5 +55,6 @@ export function CategoryTree() {
         ))}
       </CardContent>
     </Card>
+    </TiltSurface>
   );
 }

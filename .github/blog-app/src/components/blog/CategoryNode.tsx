@@ -25,8 +25,8 @@ export function CategoryNode({
       <button
         type="button"
         className={cn(
-          "grid min-h-10 w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-2 border-2 border-transparent px-2.5 py-2 text-left transition-[background-color,transform,box-shadow] hover:border-ink hover:bg-sun hover:shadow-[3px_3px_0_#111] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none",
-          isOpen && (isTopLevel ? "border-ink bg-sun shadow-[3px_3px_0_#111]" : "border-ink bg-surface"),
+          "rounded-xl grid min-h-11 w-full grid-cols-[auto_minmax(0,1fr)] items-center gap-2 border border-transparent px-2.5 py-2 text-left transition-[background-color,transform,box-shadow] hover:border-line hover:bg-sun hover:shadow-soft active:scale-[0.98]  active:shadow-none",
+          isOpen && (isTopLevel ? "border-line bg-sun shadow-soft" : "border-line bg-surface"),
         )}
         style={
           isOpen && !isTopLevel && tone
@@ -35,12 +35,13 @@ export function CategoryNode({
               }
             : undefined
         }
+        aria-expanded={isOpen}
         onClick={() => togglePath(node.path)}
       >
         <span className="inline-flex items-center gap-2 text-ink">
           <ChevronRight
             className={cn(
-              "h-4 w-4 shrink-0 stroke-[3] text-ink transition-transform duration-150",
+              "h-4 w-4 shrink-0 stroke-[1.8] text-ink transition-transform duration-150",
               isOpen && "rotate-90",
             )}
             aria-hidden="true"
@@ -48,7 +49,7 @@ export function CategoryNode({
           {tone ? (
             <span
               aria-hidden
-              className="h-3 w-3 shrink-0 border-2 border-ink"
+              className="h-2 w-2 rounded-full shrink-0 border border-line"
               style={{ backgroundColor: tone.ink }}
             />
           ) : null}
@@ -57,19 +58,19 @@ export function CategoryNode({
           <span
             className={cn(
               "truncate text-sm font-bold text-ink-soft",
-              isOpen ? "font-black text-ink" : "font-bold",
+              isOpen ? "font-semibold text-ink" : "font-bold",
             )}
           >
             {node.name}
           </span>
-          <span className="shrink-0 border border-ink bg-surface px-1.5 font-mono text-[10px] font-black tabular-nums text-ink">
+          <span className="rounded-md shrink-0 border border-line bg-surface px-1.5 font-mono text-[10px] font-semibold tabular-nums text-ink">
             {node.count}
           </span>
         </span>
       </button>
 
       {isOpen ? (
-        <div className="ml-[17px] mt-2 grid min-w-0 gap-1 overflow-hidden border-l-[3px] border-line pl-3">
+        <div className="ml-[17px] mt-2 grid min-w-0 gap-1 overflow-hidden border-l border-line pl-3">
           {node.children.map((child) => (
             <CategoryNode
               key={child.path}
@@ -86,7 +87,7 @@ export function CategoryNode({
               href={file.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="group/file grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 overflow-hidden border-2 border-transparent px-2.5 py-2 text-[13px] font-semibold leading-snug text-ink-muted no-underline transition-colors hover:border-ink hover:bg-primary hover:text-white"
+              className="group/file rounded-lg grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1.5 overflow-hidden border border-transparent px-2.5 py-2 text-[13px] font-semibold leading-snug text-ink-muted no-underline transition-colors hover:border-line hover:bg-recess hover:text-ink"
             >
               <span className="min-w-0 truncate">{file.title}</span>
               <span aria-hidden className="shrink-0 opacity-0 transition-opacity group-hover/file:opacity-100">

@@ -1,164 +1,26 @@
 @import "tailwindcss";
 
-@theme {
-  /* Neubrutalist foundation: loud primaries, unapologetic black and warm paper. */
-  --font-sans:
-    "Geist Variable", Inter, ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  --font-serif:
-    "Iowan Old Style", "Palatino Linotype", "URW Palladio L", P052, Palatino,
-    "Songti SC", "Source Han Serif SC", "Noto Serif SC", Georgia, serif;
-  --font-mono:
-    "Geist Mono", ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", monospace;
-
-  --color-canvas: #fff6dd;
-  --color-surface: #fffdf5;
-  --color-recess: #ffe867;
-  --color-primary: #0057d9;
-  --color-primary-dark: #003fa6;
-  --color-signal: #ff493d;
-  --color-sun: #ffdc22;
-  --color-mint: #7ee8a2;
-
-  --color-ink: #111111;
-  --color-ink-soft: #292929;
-  --color-ink-muted: #5e5b54;
-  --color-ink-faint: #858078;
-
-  --color-line: #111111;
-  --color-line-strong: #111111;
-
-  --color-tag-sage-bg: #7ee8a2;
-  --color-tag-sage-ink: #111111;
-  --color-tag-clay-bg: #ff756d;
-  --color-tag-clay-ink: #111111;
-  --color-tag-amber-bg: #ffdc22;
-  --color-tag-amber-ink: #111111;
-  --color-tag-plum-bg: #c8a4ff;
-  --color-tag-plum-ink: #111111;
-  --color-tag-slate-bg: #d6d0c2;
-  --color-tag-slate-ink: #111111;
-  --color-tag-sky-bg: #70c9ff;
-  --color-tag-sky-ink: #111111;
-
-  --shadow-soft: 5px 5px 0 #111111;
-  --shadow-lift: 8px 8px 0 #111111;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background-color: var(--color-canvas);
-  color: var(--color-ink);
-  font-family: var(--font-sans);
-  text-wrap: pretty;
-  background-image:
-    linear-gradient(rgba(17, 17, 17, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(17, 17, 17, 0.045) 1px, transparent 1px);
-  background-size: 24px 24px;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.24;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitchTiles'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");
-}
-
-#root {
-  position: relative;
-  z-index: 1;
-}
-
-a {
-  color: inherit;
-}
-
-::selection {
-  background-color: var(--color-primary);
-  color: #fff;
-}
-
-/* Keyboard keys rendered as physical chips. */
-kbd {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.25rem;
-  padding: 0 0.3rem;
-  border: 2px solid var(--color-line-strong);
-  border-radius: 0;
-  background-color: var(--color-surface);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  line-height: 1.4rem;
-  color: var(--color-ink);
-  box-shadow: 2px 2px 0 var(--color-ink);
-}
-
-.search-shortcut {
-  display: inline-flex;
-}
-
-.peer:focus ~ .search-shortcut {
-  display: none;
-}
-
-@media (max-width: 639px) {
-  .search-shortcut {
-    display: none;
-  }
-}
-
-/* Staggered entrance (CSS-only, no scroll listeners). */
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translate(5px, 5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 0.35s steps(4, end) both;
-}
-
-.neo-hover {
-  transition: transform 140ms ease, box-shadow 140ms ease;
-}
-
-.neo-hover:hover {
-  transform: translate(2px, 2px);
-  box-shadow: 3px 3px 0 var(--color-ink);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
+:root { font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; color: #454139; background: #dfead4; }
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+body { min-width: 320px; }
+.immersive-root, .webgl-world { position: fixed; inset: 0; }
+.webgl-world { touch-action: none; background: linear-gradient(#dcebdc, #fff5d8); }
+.webgl-world canvas { display: block; width: 100%; height: 100%; outline: none; }
+.loading-screen { position: fixed; inset: 0; z-index: 5; display: grid; place-content: center; justify-items: center; gap: 14px; color: #667b50; background: radial-gradient(circle, #fffdf3, #dfead4); transition: opacity .55s ease, visibility .55s; }
+.loading-screen.is-hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.loading-screen p { margin: 0; font-size: 14px; letter-spacing: .15em; }
+.loading-bird { font-size: 44px; animation: float 1.8s ease-in-out infinite; }
+.search-editor { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 20px; background: #34443866; backdrop-filter: blur(5px); }
+.search-editor[hidden] { display: none; }
+.search-editor form { width: min(100%, 440px); padding: 26px; border: 2px solid #d4c398; border-radius: 22px; background: #fff9e9; box-shadow: 0 18px 60px #243b3840; }
+.search-editor h2 { margin: 0 0 20px; color: #536941; font-size: 23px; }
+.search-editor label { display: block; margin-bottom: 10px; font-size: 14px; }
+.search-editor input { width: 100%; padding: 13px; border: 2px solid #b0c397; border-radius: 10px; background: #fffef8; color: #38432f; font-size: 16px; }
+.search-editor input:focus { outline: 3px solid #cdddaf; outline-offset: 2px; }
+.search-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px; }
+.search-actions button { padding: 10px 22px; border: 0; border-radius: 10px; background: #e8e3d4; cursor: pointer; }
+.search-actions button[type=submit] { background: #637f49; color: white; }
+.sr-navigation { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@keyframes float { 50% { transform: translateY(-9px) rotate(5deg); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

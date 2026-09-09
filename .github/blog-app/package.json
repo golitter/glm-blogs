@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
-    "prebuild": "python3 scripts/generate-blog-data.py",
-    "build": "./node_modules/.bin/tsc --noEmit && ./node_modules/.bin/vite build",
+    "prebuild": "node scripts/generate-data.mjs",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
@@ -17,13 +17,15 @@
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.6.0"
+    "tailwind-merge": "^2.6.0",
+    "three": "^0.185.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^22.10.2",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
+    "@types/three": "^0.185.4",
     "@vitejs/plugin-react": "^5.0.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.2",

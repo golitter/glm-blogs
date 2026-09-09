@@ -5,14 +5,14 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap border-2 border-ink font-black uppercase transition-[background-color,color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:pointer-events-none disabled:opacity-50",
+  "rounded-full inline-flex items-center justify-center gap-2 whitespace-nowrap border border-line font-semibold  transition-[background-color,color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/30 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        default: "bg-primary text-white shadow-[3px_3px_0_#111] hover:bg-primary-dark hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_#111] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none",
-        ghost: "bg-sun text-ink shadow-[3px_3px_0_#111] hover:bg-recess hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_#111]",
+        default: "bg-primary text-white shadow-soft hover:bg-primary-dark hover:-translate-y-0.5  hover:shadow-soft active:scale-[0.98]  active:shadow-none",
+        ghost: "bg-recess text-ink shadow-soft hover:bg-recess hover:-translate-y-0.5  hover:shadow-soft",
         outline:
-          "bg-surface text-ink shadow-[3px_3px_0_#111] hover:bg-recess hover:translate-x-[1px] hover:translate-y-[1px] hover:shadow-[2px_2px_0_#111]",
+          "bg-surface text-ink shadow-soft hover:bg-recess hover:-translate-y-0.5  hover:shadow-soft",
       },
       size: {
         default: "h-9 px-4 text-sm",

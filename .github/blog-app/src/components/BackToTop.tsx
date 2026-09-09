@@ -18,11 +18,13 @@ export function BackToTop() {
     <Button
       variant="default"
       className={cn(
-        "fixed bottom-6 right-6 z-20 h-11 w-11 bg-signal p-0 text-white shadow-lift transition-[opacity,transform] duration-200 active:translate-x-2 active:translate-y-2 active:shadow-none max-[560px]:bottom-4 max-[560px]:right-4 max-[560px]:h-10 max-[560px]:w-10",
+        "fixed bottom-6 right-6 z-20 h-11 w-11 bg-primary p-0 text-white shadow-lift transition-[opacity,transform] duration-200 active:scale-95  active:shadow-none max-[560px]:bottom-4 max-[560px]:right-4 max-[560px]:h-10 max-[560px]:w-10",
         show ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0",
       )}
+      tabIndex={show ? 0 : -1}
+      aria-hidden={!show}
       aria-label="回到顶部"
-      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      onClick={() => window.scrollTo({ top: 0, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" })}
     >
       <ArrowUp className="h-4 w-4" />
     </Button>

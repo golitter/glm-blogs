@@ -20,7 +20,7 @@ export const blogTree = [
   {
     "name": "aicode",
     "path": "aicode",
-    "count": 10,
+    "count": 11,
     "children": [],
     "files": [
       {
@@ -42,6 +42,11 @@ export const blogTree = [
         "title": "AI Native时代，如何更好的用ai工具",
         "path": "aicode/AI Native时代，如何更好的用ai工具.md",
         "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/AI%20Native%E6%97%B6%E4%BB%A3%EF%BC%8C%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E7%9A%84%E7%94%A8ai%E5%B7%A5%E5%85%B7.md"
+      },
+      {
+        "title": "aicoding agent会话成本管控",
+        "path": "aicode/aicoding agent会话成本管控.md",
+        "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/aicoding%20agent%E4%BC%9A%E8%AF%9D%E6%88%90%E6%9C%AC%E7%AE%A1%E6%8E%A7.md"
       },
       {
         "title": "codegraph",
@@ -78,12 +83,12 @@ export const blogTree = [
   {
     "name": "backend",
     "path": "backend",
-    "count": 20,
+    "count": 31,
     "children": [
       {
         "name": "go",
         "path": "backend/go",
-        "count": 18,
+        "count": 21,
         "children": [],
         "files": [
           {
@@ -95,6 +100,16 @@ export const blogTree = [
             "title": "Gin框架-获取参数",
             "path": "backend/go/Gin框架-获取参数.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/backend/go/Gin%E6%A1%86%E6%9E%B6-%E8%8E%B7%E5%8F%96%E5%8F%82%E6%95%B0.md"
+          },
+          {
+            "title": "GMP",
+            "path": "backend/go/GMP.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/go/GMP.md"
+          },
+          {
+            "title": "GORM-CRUD查询分页删除批量操作",
+            "path": "backend/go/GORM-CRUD查询分页删除批量操作.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/go/GORM-CRUD%E6%9F%A5%E8%AF%A2%E5%88%86%E9%A1%B5%E5%88%A0%E9%99%A4%E6%89%B9%E9%87%8F%E6%93%8D%E4%BD%9C.md"
           },
           {
             "title": "GORM框架",
@@ -162,6 +177,11 @@ export const blogTree = [
             "url": "https://github.com/golitter/glm-blogs/blob/master/backend/go/testing%E6%A8%A1%E5%9D%97.md"
           },
           {
+            "title": "Viper配置管理",
+            "path": "backend/go/Viper配置管理.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/go/Viper%E9%85%8D%E7%BD%AE%E7%AE%A1%E7%90%86.md"
+          },
+          {
             "title": "vscode调试go程序",
             "path": "backend/go/vscode调试go程序.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/backend/go/vscode%E8%B0%83%E8%AF%95go%E7%A8%8B%E5%BA%8F.md"
@@ -181,23 +201,72 @@ export const blogTree = [
       {
         "name": "mysql",
         "path": "backend/mysql",
-        "count": 2,
+        "count": 5,
         "children": [],
         "files": [
           {
-            "title": "阶段一",
-            "path": "backend/mysql/阶段一.md",
-            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/mysql/%E9%98%B6%E6%AE%B5%E4%B8%80.md"
+            "title": "InnoDB架构与日志",
+            "path": "backend/mysql/InnoDB架构与日志.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/mysql/InnoDB%E6%9E%B6%E6%9E%84%E4%B8%8E%E6%97%A5%E5%BF%97.md"
           },
           {
-            "title": "阶段二",
-            "path": "backend/mysql/阶段二.md",
-            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/mysql/%E9%98%B6%E6%AE%B5%E4%BA%8C.md"
+            "title": "事务锁与MVCC",
+            "path": "backend/mysql/事务锁与MVCC.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/mysql/%E4%BA%8B%E5%8A%A1%E9%94%81%E4%B8%8EMVCC.md"
+          },
+          {
+            "title": "查询语法与索引基础",
+            "path": "backend/mysql/查询语法与索引基础.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/mysql/%E6%9F%A5%E8%AF%A2%E8%AF%AD%E6%B3%95%E4%B8%8E%E7%B4%A2%E5%BC%95%E5%9F%BA%E7%A1%80.md"
+          },
+          {
+            "title": "索引原理与执行计划",
+            "path": "backend/mysql/索引原理与执行计划.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/mysql/%E7%B4%A2%E5%BC%95%E5%8E%9F%E7%90%86%E4%B8%8E%E6%89%A7%E8%A1%8C%E8%AE%A1%E5%88%92.md"
+          },
+          {
+            "title": "表设计与运维优化",
+            "path": "backend/mysql/表设计与运维优化.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/mysql/%E8%A1%A8%E8%AE%BE%E8%AE%A1%E4%B8%8E%E8%BF%90%E7%BB%B4%E4%BC%98%E5%8C%96.md"
+          }
+        ]
+      },
+      {
+        "name": "redis",
+        "path": "backend/redis",
+        "count": 3,
+        "children": [],
+        "files": [
+          {
+            "title": "持久化与内存管理",
+            "path": "backend/redis/持久化与内存管理.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/redis/%E6%8C%81%E4%B9%85%E5%8C%96%E4%B8%8E%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86.md"
+          },
+          {
+            "title": "数据类型",
+            "path": "backend/redis/数据类型.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/redis/%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B.md"
+          },
+          {
+            "title": "缓存设计",
+            "path": "backend/redis/缓存设计.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/redis/%E7%BC%93%E5%AD%98%E8%AE%BE%E8%AE%A1.md"
           }
         ]
       }
     ],
-    "files": []
+    "files": [
+      {
+        "title": "RESTful API",
+        "path": "backend/RESTful API.md",
+        "url": "https://github.com/golitter/glm-blogs/blob/master/backend/RESTful%20API.md"
+      },
+      {
+        "title": "后端测试分层与压测",
+        "path": "backend/后端测试分层与压测.md",
+        "url": "https://github.com/golitter/glm-blogs/blob/master/backend/%E5%90%8E%E7%AB%AF%E6%B5%8B%E8%AF%95%E5%88%86%E5%B1%82%E4%B8%8E%E5%8E%8B%E6%B5%8B.md"
+      }
+    ]
   },
   {
     "name": "good",
@@ -215,7 +284,7 @@ export const blogTree = [
   {
     "name": "linux",
     "path": "linux",
-    "count": 9,
+    "count": 12,
     "children": [
       {
         "name": "docker",
@@ -233,9 +302,14 @@ export const blogTree = [
       {
         "name": "git",
         "path": "linux/git",
-        "count": 3,
+        "count": 4,
         "children": [],
         "files": [
+          {
+            "title": "git冲突处理指南",
+            "path": "linux/git/git冲突处理指南.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/linux/git/git%E5%86%B2%E7%AA%81%E5%A4%84%E7%90%86%E6%8C%87%E5%8D%97.md"
+          },
           {
             "title": "git常用操作指令",
             "path": "linux/git/git常用操作指令.md",
@@ -261,6 +335,11 @@ export const blogTree = [
         "url": "https://github.com/golitter/glm-blogs/blob/master/linux/claude%2Bchatglm4.6.md"
       },
       {
+        "title": "Codex连接本地WSL2-SSH教程",
+        "path": "linux/Codex连接本地WSL2-SSH教程.md",
+        "url": "https://github.com/golitter/glm-blogs/blob/master/linux/Codex%E8%BF%9E%E6%8E%A5%E6%9C%AC%E5%9C%B0WSL2-SSH%E6%95%99%E7%A8%8B.md"
+      },
+      {
         "title": "github-action博客页面",
         "path": "linux/github-action博客页面.md",
         "url": "https://github.com/golitter/glm-blogs/blob/master/linux/github-action%E5%8D%9A%E5%AE%A2%E9%A1%B5%E9%9D%A2.md"
@@ -276,6 +355,11 @@ export const blogTree = [
         "url": "https://github.com/golitter/glm-blogs/blob/master/linux/macos%E9%85%8D%E7%BD%AEzsh.md"
       },
       {
+        "title": "tmux常用命令",
+        "path": "linux/tmux常用命令.md",
+        "url": "https://github.com/golitter/glm-blogs/blob/master/linux/tmux%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4.md"
+      },
+      {
         "title": "vscode-ssh免密登录",
         "path": "linux/vscode-ssh免密登录.md",
         "url": "https://github.com/golitter/glm-blogs/blob/master/linux/vscode-ssh%E5%85%8D%E5%AF%86%E7%99%BB%E5%BD%95.md"
@@ -285,23 +369,43 @@ export const blogTree = [
   {
     "name": "llm",
     "path": "llm",
-    "count": 32,
+    "count": 41,
     "children": [
       {
         "name": "agent",
         "path": "llm/agent",
-        "count": 15,
+        "count": 23,
         "children": [],
         "files": [
+          {
+            "title": "agent从记忆到自我进化",
+            "path": "llm/agent/agent从记忆到自我进化.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/agent%E4%BB%8E%E8%AE%B0%E5%BF%86%E5%88%B0%E8%87%AA%E6%88%91%E8%BF%9B%E5%8C%96.md"
+          },
           {
             "title": "agent时代的CLI",
             "path": "llm/agent/agent时代的CLI.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/agent%E6%97%B6%E4%BB%A3%E7%9A%84CLI.md"
           },
           {
+            "title": "agent的意图识别设计",
+            "path": "llm/agent/agent的意图识别设计.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/agent%E7%9A%84%E6%84%8F%E5%9B%BE%E8%AF%86%E5%88%AB%E8%AE%BE%E8%AE%A1.md"
+          },
+          {
             "title": "agent评测",
             "path": "llm/agent/agent评测.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/agent%E8%AF%84%E6%B5%8B.md"
+          },
+          {
+            "title": "Agent高危工具与长时间工具调用设计",
+            "path": "llm/agent/Agent高危工具与长时间工具调用设计.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/Agent%E9%AB%98%E5%8D%B1%E5%B7%A5%E5%85%B7%E4%B8%8E%E9%95%BF%E6%97%B6%E9%97%B4%E5%B7%A5%E5%85%B7%E8%B0%83%E7%94%A8%E8%AE%BE%E8%AE%A1.md"
+          },
+          {
+            "title": "aicoding memory实现",
+            "path": "llm/agent/aicoding memory实现.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/aicoding%20memory%E5%AE%9E%E7%8E%B0.md"
           },
           {
             "title": "claude code源码",
@@ -324,6 +428,16 @@ export const blogTree = [
             "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/datawhale%EF%BC%9A03%20%E5%A4%9A%E6%99%BA%E8%83%BD%E4%BD%93%E5%BC%80%E5%8F%91%E8%8C%83%E5%BC%8F%E4%B8%8E%E6%9C%80%E4%BD%B3%E5%AE%9E%E8%B7%B5.md"
           },
           {
+            "title": "deepseek harness",
+            "path": "llm/agent/deepseek harness.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/deepseek%20harness.md"
+          },
+          {
+            "title": "GPT6-Astra分析",
+            "path": "llm/agent/GPT6-Astra分析.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/GPT6-Astra%E5%88%86%E6%9E%90.md"
+          },
+          {
             "title": "harness不是目的，知识才是护城河",
             "path": "llm/agent/harness不是目的，知识才是护城河.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/harness%E4%B8%8D%E6%98%AF%E7%9B%AE%E7%9A%84%EF%BC%8C%E7%9F%A5%E8%AF%86%E6%89%8D%E6%98%AF%E6%8A%A4%E5%9F%8E%E6%B2%B3.md"
@@ -344,6 +458,11 @@ export const blogTree = [
             "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/llm%20agent%E6%8F%90%E7%A4%BA%E8%AF%8D%E5%BA%94%E7%94%A8%E5%AE%9E%E8%B7%B5.md"
           },
           {
+            "title": "loop engineer",
+            "path": "llm/agent/loop engineer.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/loop%20engineer.md"
+          },
+          {
             "title": "memori agent的记忆引擎",
             "path": "llm/agent/memori agent的记忆引擎.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/memori%20agent%E7%9A%84%E8%AE%B0%E5%BF%86%E5%BC%95%E6%93%8E.md"
@@ -352,6 +471,11 @@ export const blogTree = [
             "title": "opencode skills实现原理",
             "path": "llm/agent/opencode skills实现原理.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/opencode%20skills%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86.md"
+          },
+          {
+            "title": "开源aicoding功能原理",
+            "path": "llm/agent/开源aicoding功能原理.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/%E5%BC%80%E6%BA%90aicoding%E5%8A%9F%E8%83%BD%E5%8E%9F%E7%90%86.md"
           },
           {
             "title": "意图识别、槽位填充，参数提取节点",
@@ -419,7 +543,7 @@ export const blogTree = [
       {
         "name": "theory",
         "path": "llm/theory",
-        "count": 11,
+        "count": 12,
         "children": [],
         "files": [
           {
@@ -436,6 +560,11 @@ export const blogTree = [
             "title": "deeqseek v3.2 技术报告",
             "path": "llm/theory/deeqseek v3.2 技术报告.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/llm/theory/deeqseek%20v3.2%20%E6%8A%80%E6%9C%AF%E6%8A%A5%E5%91%8A.md"
+          },
+          {
+            "title": "J-Space",
+            "path": "llm/theory/J-Space.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/theory/J-Space.md"
           },
           {
             "title": "MoE概念",
@@ -529,6 +658,19 @@ export const blogTree = [
     ]
   },
   {
+    "name": "research",
+    "path": "research",
+    "count": 1,
+    "children": [],
+    "files": [
+      {
+        "title": "deep unfolding",
+        "path": "research/deep unfolding.md",
+        "url": "https://github.com/golitter/glm-blogs/blob/master/research/deep%20unfolding.md"
+      }
+    ]
+  },
+  {
     "name": "skills",
     "path": "skills",
     "count": 1,
@@ -562,35 +704,35 @@ export const blogTree = [
 ] satisfies BlogTreeNode[];
 export const recentFiles = [
   {
-    "title": "index",
-    "path": "skills/index.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/skills/index.md",
-    "date": "2026-07-04 17:53"
+    "title": "GPT6-Astra分析",
+    "path": "llm/agent/GPT6-Astra分析.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/GPT6-Astra%E5%88%86%E6%9E%90.md",
+    "date": "2026-09-05 19:02"
   },
   {
-    "title": "AI Native时代，如何更好的用ai工具",
-    "path": "aicode/AI Native时代，如何更好的用ai工具.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/AI%20Native%E6%97%B6%E4%BB%A3%EF%BC%8C%E5%A6%82%E4%BD%95%E6%9B%B4%E5%A5%BD%E7%9A%84%E7%94%A8ai%E5%B7%A5%E5%85%B7.md",
-    "date": "2026-07-04 00:25"
+    "title": "资料",
+    "path": "llm/agent/资料.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/%E8%B5%84%E6%96%99.md",
+    "date": "2026-09-04 19:56"
   },
   {
-    "title": "字节2026-ai全栈挑战赛ai协助开发记录",
-    "path": "aicode/字节2026-ai全栈挑战赛ai协助开发记录.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/%E5%AD%97%E8%8A%822026-ai%E5%85%A8%E6%A0%88%E6%8C%91%E6%88%98%E8%B5%9Bai%E5%8D%8F%E5%8A%A9%E5%BC%80%E5%8F%91%E8%AE%B0%E5%BD%95.md",
-    "date": "2026-07-04 00:21"
+    "title": "aicoding agent会话成本管控",
+    "path": "aicode/aicoding agent会话成本管控.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/aicoding%20agent%E4%BC%9A%E8%AF%9D%E6%88%90%E6%9C%AC%E7%AE%A1%E6%8E%A7.md",
+    "date": "2026-08-17 20:06"
   },
   {
-    "title": "agent评测",
-    "path": "llm/agent/agent评测.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/agent%E8%AF%84%E6%B5%8B.md",
-    "date": "2026-07-03 23:20"
+    "title": "J-Space",
+    "path": "llm/theory/J-Space.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/theory/J-Space.md",
+    "date": "2026-08-17 19:35"
   },
   {
-    "title": "golemon-blogs页面",
-    "path": "others/golemon-blogs页面.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/others/golemon-blogs%E9%A1%B5%E9%9D%A2.md",
-    "date": "2026-07-03 16:56"
+    "title": "deepseek harness",
+    "path": "llm/agent/deepseek harness.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/deepseek%20harness.md",
+    "date": "2026-08-16 19:25"
   }
 ] satisfies RecentFile[];
-export const markdownCount = 81;
-export const updateTime = "2026-07-04 18:04:37";
+export const markdownCount = 106;
+export const updateTime = "2026-09-09 12:57:09";
