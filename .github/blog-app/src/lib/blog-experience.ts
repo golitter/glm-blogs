@@ -1,4 +1,3 @@
-import { pinyin } from "pinyin-pro";
 import { blogTree, type BlogFile, type BlogTreeNode } from "../generated/blog-data";
 
 export const flatten = (node: BlogTreeNode): BlogFile[] => [...node.files, ...node.children.flatMap(flatten)];
@@ -7,21 +6,37 @@ export const nodes: BlogTreeNode[] = [];
 function collect(items: BlogTreeNode[]) { for (const n of items) { nodes.push(n); collect(n.children); } }
 collect(blogTree);
 const normalize = (s: string) => s.normalize("NFKC").toLowerCase().replace(/[\s\u0300-\u036f]/g, "");
-const index = files.map(file => {
-  const text = `${file.title} ${file.path}`;
-  return {file, text: normalize(text), phonetic: normalize(pinyin(text, {toneType: "none"})), initials: normalize(pinyin(text, {pattern: "first", toneType: "none"}))};
-});
+// Pinyin matching needs a large dictionary, so it loads on demand and never blocks first paint.
+type Entry = {file: BlogFile; text: string; phonetic: string; initials: string};
+let pinyinFn: typeof import("pinyin-pro").pinyin | null = null;
+let index: Entry[] | null = null;
+let warming: Promise<void> | null = null;
+function buildIndex() {
+  index = files.map(file => {
+    const text = `${file.title} ${file.path}`;
+    return {file, text: normalize(text), phonetic: normalize(pinyinFn!(text, {toneType: "none"})), initials: normalize(pinyinFn!(text, {pattern: "first", toneType: "none"}))};
+  });
+}
+export function warmSearch(): Promise<void> {
+  return warming ??= import("pinyin-pro").then(({pinyin}) => { pinyinFn = pinyin; buildIndex(); });
+}
 export function searchFiles(query: string) {
   const terms = query.trim().split(/\s+/).map(normalize).filter(Boolean);
-  return index.filter(item => terms.every(q => item.text.includes(q) || item.phonetic.includes(q) || item.initials.includes(q))).map(item => item.file);
+  if (!terms.length) return files;
+  if (!index) {
+    if (pinyinFn) buildIndex();
+    else { warmSearch(); return files.filter(file => terms.every(q => normalize(`${file.title} ${file.path}`).includes(q))); }
+  }
+  return index!.filter(item => terms.every(q => item.text.includes(q) || item.phonetic.includes(q) || item.initials.includes(q))).map(item => item.file);
 }
 export function highlightedParts(text: string, query: string) {
   const chars = Array.from(text), hits = new Set<number>();
+  if (!pinyinFn) { warmSearch(); return [{text, hit: false}]; }
   for (const term of query.trim().split(/\s+/).map(normalize).filter(Boolean)) {
     for (const mode of ["text", "pinyin", "initials"]) {
       const positions: number[] = []; let joined = "";
       chars.forEach((char,i) => {
-        const part = mode === "text" ? normalize(char) : normalize(pinyin(char, {toneType:"none", ...(mode === "initials" ? {pattern:"first" as const} : {})}));
+        const part = mode === "text" ? normalize(char) : normalize(pinyinFn!(char, {toneType:"none", ...(mode === "initials" ? {pattern:"first" as const} : {})}));
         joined += part; positions.push(...Array(part.length).fill(i));
       });
       for (let at = joined.indexOf(term); at >= 0; at = joined.indexOf(term, at + term.length)) {

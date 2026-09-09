@@ -14,7 +14,8 @@ test('routes round trip Chinese, nested paths, reserved query characters and cam
   assert.deepEqual(lib.parseRoute('#/category/%broken'), {view:'home'});
   assert.equal(lib.parseRoute('#/recent?camera=NaN,2,3,4,5,6').camera, undefined);
 });
-test('search supports case folding, pinyin, initials, multiple terms and empty query', () => {
+test('search supports case folding, pinyin, initials, multiple terms and empty query', async () => {
+  await lib.warmSearch();
   assert.equal(lib.searchFiles('').length, lib.files.length);
   assert.deepEqual(lib.searchFiles('CODEX'), lib.searchFiles('codex'));
   assert.ok(lib.searchFiles('ceshi').some(f => f.title.includes('测试')));
@@ -22,7 +23,8 @@ test('search supports case folding, pinyin, initials, multiple terms and empty q
   assert.ok(lib.searchFiles('backend ceshi').every(f => f.path.includes('backend')));
   assert.equal(lib.searchFiles('___no_match_928375___').length, 0);
 });
-test('highlight maps pinyin to the matching Chinese characters', () => {
+test('highlight maps pinyin to the matching Chinese characters', async () => {
+  await lib.warmSearch();
   assert.equal(lib.highlightedParts('后端测试分层', 'ceshi').filter(p => p.hit).map(p => p.text).join(''), '测试');
 });
 test('NEW is limited to recently added articles, never recent edits', () => {

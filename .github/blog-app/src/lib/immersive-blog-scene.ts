@@ -137,8 +137,10 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   }
   function textPlane(text: string, width: number, height: number, options: { color?: string; size?: number; weight?: number; align?: CanvasTextAlign; background?: string; border?: string; emphasis?: string } = {}) {
     const canvas = document.createElement("canvas");
-    canvas.width = 1024;
-    canvas.height = Math.round(1024 * height / width);
+    // Texture density tracks the plane's on-screen size; small labels skip the full 1024-wide canvas.
+    canvas.width = Math.max(256, Math.min(1024, Math.round(1024 * width / 9.8)));
+    canvas.height = Math.round(canvas.width * height / width);
+    const fit = canvas.width - 74;
     const context = canvas.getContext("2d")!;
     if (options.background) {
       context.fillStyle = options.background;
@@ -153,7 +155,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     let size = canvas.height * (rawLines.length > 1 ? .32 : .64);
     const font = () => `${options.weight ?? 600} ${size}px "Microsoft YaHei", "PingFang SC", sans-serif`;
     context.font = font();
-    while (rawLines.some(line => context.measureText(line).width > 950) && size > canvas.height * .24) {
+    while (rawLines.some(line => context.measureText(line).width > fit) && size > canvas.height * .24) {
       size *= .94;
       context.font = font();
     }
@@ -161,8 +163,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     context.textBaseline = "middle";
     context.fillStyle = options.color ?? PALETTE.ink;
     const lines = rawLines.map(line => {
-      if (context.measureText(line).width <= 950) return line;
-      while (line.length && context.measureText(line + "…").width > 950) line = line.slice(0, -1);
+      if (context.measureText(line).width <= fit) return line;
+      while (line.length && context.measureText(line + "…").width > fit) line = line.slice(0, -1);
       return line + "…";
     });
     const lineHeight = size * 1.08;
@@ -347,8 +349,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   const overviewTarget = new THREE.Vector3(0, 5 + (sceneHeight - 17) / 2, -1);
   const overview = () => fitView(overviewTarget.clone(), 27, sceneHeight, .3);
   const homeView = () => { currentView = "home"; announce({view:"home"}); overview(); };
-  const shelfView = () => { currentView = "shelf"; announce({view:"shelf"}); overview(); };
-  const recentView = () => { currentView = "recent"; announce({view:"recent"}); overview(); };
+  const shelfView = () => { currentView = "shelf"; announce({view:"shelf"}); fitView(new THREE.Vector3(-7.1, cabinet.height / 2 + .55, -2.2), 10, cabinet.height + 2, .07); };
+  const recentView = () => { currentView = "recent"; announce({view:"recent"}); fitView(new THREE.Vector3(7.2, 4.3, -2.2), 9.4, 10, .04); };
   // Left: category bookshelf with physical volumes.
   const shelf = new THREE.Group();
   shelf.position.set(-7.1, .35, -2.5);
@@ -872,8 +874,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       if (route.camera && !panel.visible) {
         const position = new THREE.Vector3(...route.camera.slice(0,3) as [number,number,number]);
         const target = new THREE.Vector3(...route.camera.slice(3) as [number,number,number]);
-                // Migrate old off-centre shelf/recent camera links to the full-room framing.
-        if (Math.abs(target.x) > 1 && ["home", "shelf", "recent"].includes(route.view)) {
+        // Only the full-room view is centred on the room; focused views retain their own targets.
+        if (Math.abs(target.x) > 1 && route.view === "home") {
           const offset = position.clone().sub(target);
           offset.setLength(Math.max(offset.length(), desiredPosition.distanceTo(desiredTarget)));
           goTo(overviewTarget.clone().add(offset), overviewTarget.clone());
@@ -916,5 +918,4 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     },
   };
 }
-
 
