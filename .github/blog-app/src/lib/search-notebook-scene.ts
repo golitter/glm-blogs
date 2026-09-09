@@ -21,6 +21,8 @@ export function createSearchNotebook(host: HTMLElement) {
     mesh.position.set(x,y,z); book.add(mesh); return mesh;
   }
   let disposed = false, frame = 0, lastSize = "";
+  // Read once instead of per pointermove: constructing a MediaQueryList on every event is pure churn.
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
   function resize() {
     if (disposed) return;
     const width = host.clientWidth, height = host.clientHeight;
@@ -49,7 +51,7 @@ export function createSearchNotebook(host: HTMLElement) {
     renderer.render(scene,camera);
   }
   function move(event: PointerEvent) {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (reducedMotion.matches) return;
     const rect = host.getBoundingClientRect();
     book.rotation.y = -.035 + ((event.clientX-rect.left)/rect.width-.5)*.025;
     book.rotation.x = -.022 + ((event.clientY-rect.top)/rect.height-.5)*.015;

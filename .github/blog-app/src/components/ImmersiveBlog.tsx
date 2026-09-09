@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
 import { SearchNotebook } from "./SearchNotebook";
@@ -10,6 +10,13 @@ function Highlight({text, query}: {text: string; query: string}) {
   const parts = useMemo(() => highlightedParts(text, query), [text, query]);
   return <>{parts.map((part,i) => part.hit ? <mark key={i}>{part.text}</mark> : part.text)}</>;
 }
+// The dialog stays mounted while hidden, and hover labels / idle fades re-render the shell on every
+// object crossing — memo keeps those renders from reconciling the full results list each time.
+const ResultList = memo(function ResultList({results, query, selected, select, remember}: {
+  results: BlogFile[]; query: string; selected: number; select: (index: number) => void; remember: (value: string) => void;
+}) {
+  return <ul id="search-results" className="search-results">{results.map((file,i) => <li id={`search-result-${i}`} key={file.path} className={selected === i ? "selected" : ""}><a href={file.url} target="_blank" rel="noreferrer" onFocus={() => select(i)} onClick={() => remember(query)}><Highlight text={file.title} query={query}/><small><Highlight text={file.path} query={query}/></small></a></li>)}</ul>;
+});
 function StaticNode({node}: {node: BlogTreeNode}) {
   return <details><summary>{node.name} <small>{node.count} 篇</small></summary><ul>{node.files.map(file => <li key={file.path}><a href={file.url} target="_blank" rel="noreferrer">{file.title}</a></li>)}</ul>{node.children.map(child => <StaticNode key={child.path} node={child}/>)}</details>;
 }
@@ -39,11 +46,12 @@ export function ImmersiveBlog() {
   const [searchReady, setSearchReady] = useState(false);
   const results = useMemo(() => searchFiles(query), [query, searchReady]);
   function completeIntro() { if (introCompleted.current) return; introCompleted.current = true; setTour(false); writeLocal("golemon-intro-done", true); }
-  function remember(value: string) {
+  // useCallback keeps the identity stable across hover-label re-renders so ResultList's memo holds.
+  const remember = useCallback(function remember(value: string) {
     if (!value.trim()) return;
     const next = [value.trim(), ...history.filter(s => s !== value.trim())].slice(0,6);
     setHistory(next); writeLocal("golemon-search-history", next);
-  }
+  }, [history]);
   function navigate(next: Route) { completeIntro(); const hash = routeHash(next); if (location.hash !== hash) location.hash = hash; else api.current?.navigate(next); }
   function navigate3D(next: Route) { setSimple(false); setSettings(false); setRandom(null); navigate(next); }
   function openSearch() { completeIntro(); warmSearch().then(() => setSearchReady(true)); flushSync(() => { setSimple(false); setSettings(false); setEditing(true); setSelected(-1); }); search.current?.focus(); search.current?.select(); }
@@ -116,7 +124,7 @@ export function ImmersiveBlog() {
       if (event.key === "Tab") {const fields = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("input,button,a")); const next = (fields.indexOf(document.activeElement as HTMLElement) + (event.shiftKey ? -1 : 1) + fields.length) % fields.length; event.preventDefault(); fields[next]?.focus();}
     }}><h2 id="search-heading">搜索笔记</h2><label htmlFor="blog-search">标题、路径、拼音或首字母</label><input ref={search} id="blog-search" type="search" value={query} onChange={e => setQuery(e.target.value)} autoComplete="off" aria-label="搜索博客文章" aria-controls="search-results" aria-activedescendant={selected >= 0 ? `search-result-${selected}` : undefined} onKeyDown={e => {if (e.key === "Enter" && e.nativeEvent.isComposing) e.preventDefault();}}/><p aria-live="polite">匹配 {results.length} 篇 · ↑↓ 选择，回车打开</p>
     {!query && history.length > 0 && <div className="search-history"><span>最近搜索</span>{history.map(term => <button type="button" key={term} onClick={() => setQuery(term)}>{term}</button>)}<button type="button" onClick={() => {setHistory([]); writeLocal("golemon-search-history", []);}}>清空</button></div>}
-    <ul id="search-results" className="search-results">{results.map((file,i) => <li id={`search-result-${i}`} key={file.path} className={selected === i ? "selected" : ""}><a href={file.url} target="_blank" rel="noreferrer" onFocus={() => setSelected(i)} onClick={() => remember(query)}><Highlight text={file.title} query={query}/><small><Highlight text={file.path} query={query}/></small></a></li>)}</ul>
+    <ResultList results={results} query={query} selected={selected} select={setSelected} remember={remember}/>
     {!results.length && <div><p>没有找到文章，试试这些相近分类：</p>{suggestions(query).map(node => <button key={node.path} type="button" onClick={() => {navigate({view:"category",path:node.path}); closeSearch();}}>{node.path}</button>)}</div>}
     <div className="search-actions"><button type="button" onClick={closeSearch}>取消</button><button type="button" onClick={submit}>在书页中查看</button></div></form></div></div>
     {random && <aside className="random-card" role="dialog" aria-label="随机探索"><small>今天翻到这一篇</small><h2>{random.title}</h2><p>{random.path}</p><a href={random.url} target="_blank" rel="noreferrer" onClick={() => setRandom(null)}>前往 GitHub 阅读 ↗</a><button onClick={explore}>再抽一篇</button><button onClick={() => setRandom(null)}>收起</button></aside>}

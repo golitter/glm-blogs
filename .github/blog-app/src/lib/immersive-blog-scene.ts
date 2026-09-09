@@ -31,6 +31,8 @@ type SceneOptions = {
   onError: () => void;
 };
 type DirectoryEntry = BlogFile & { folder?: BlogTreeNode };
+// A panel list row; content is built lazily on first visibility (see showPanel).
+type PanelRow = { group: THREE.Group; y: number; halfHeight: number; file: DirectoryEntry; index: number; built: boolean };
 
 const PALETTE = {
   cream: 0xfffaea,
@@ -227,7 +229,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
     const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, side: THREE.FrontSide, toneMapped: false, fog: false });
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material);
+    // Labels reuse a handful of sizes throughout the room and panel, so plane geometries share the cache too.
+    const plane = new THREE.Mesh(cached(`p:${width}x${height}`, () => new THREE.PlaneGeometry(width, height)), material);
     plane.userData.textTexture = texture;
     plane.userData.label = text;
     return plane;
@@ -593,7 +596,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   let scrollLimit = 0;
   let listTop = 0;
   let listBottom = 0;
-  let scrollRows: { group: THREE.Group; y: number; halfHeight: number }[] = [];
+  let scrollRows: PanelRow[] = [];
+  let buildRow: ((row: PanelRow) => void) | null = null;
   let scrollThumb: THREE.Mesh | null = null;
   function scrollPanel(value: number) {
     lastActivity = performance.now();
@@ -605,6 +609,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       const record = row.group.userData.hit as Interactive | undefined;
       if (record) record.basePosition.copy(row.group.position);
       row.group.visible = row.group.position.y + row.halfHeight >= listBottom && row.group.position.y - row.halfHeight <= listTop;
+      if (row.group.visible && !row.built) buildRow?.(row);
     }
     if (scrollThumb) {
       scrollThumb.position.y = listTop - .35 - (scrollLimit ? panelScroll / scrollLimit : 0) * (listTop - listBottom - .7);
@@ -636,6 +641,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     });
     panel.clear();
     scrollRows = [];
+    buildRow = null;
     scrollThumb = null;
   }
   function closePanel() {
@@ -717,8 +723,16 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       const group = new THREE.Group();
       group.position.set(column * 3.55, firstY - row * rowStep, .56);
       group.userData.scrollRow = true;
-      scrollRows.push({group, y: group.position.y, halfHeight: rowHeight / 2});
+      scrollRows.push({group, y: group.position.y, halfHeight: rowHeight / 2, file, index, built: false});
       panel.add(group);
+    });
+    // Row content (canvas textures, cloned materials) dominates panel cost, yet only ~a dozen rows
+    // are on screen at once — building all N upfront hitches on every open. Each row's content is
+    // created the first time scrolling reveals it; the initial scrollPanel below builds visible rows.
+    buildRow = (row) => {
+      row.built = true;
+      const {file, index} = row;
+      const group = row.group;
       rounded(group, [portrait ? 6.15 : 6.25, portrait ? 1.08 : .92, .16], [0, 0, 0], index % 2 ? 0xf7f2e4 : 0xeef3e2, .12);
       const rowText = textPlane(`${index + 1}. ${file.title}`, portrait ? 5.55 : 5.65, .5, { weight: 600, align: "left" });
       rowText.position.z = .1;
@@ -733,7 +747,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
         object.castShadow = false;
       });
       interactive(group, () => file.folder ? openDirectory(file.folder) : window.open(file.url, "_blank", "noopener,noreferrer"), true);
-    });
+    };
     panelButton(panel, "返回", portrait ? -2.5 : -5.9, portrait ? -4.45 : -3.55, closePanel, 1.45);
     if (titleText.startsWith("搜索")) panelButton(panel, "输入关键词", portrait ? -.9 : -2.8, portrait ? -3.65 : -3.55, options.onSearchRequest, 2.4);
     scrollPanel(scrollOffset);
@@ -765,7 +779,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     renderer.shadowMap.needsUpdate = true;
     outline.selectedObjects = [record.root]; options.onHover(record.name);
   }
-  let downAt = new THREE.Vector2();
+  // Plain numbers instead of a Vector2: pointermove fires faster than the display and must stay allocation-free.
+  let downX = 0, downY = 0;
   let dragged = false;
   let pressed: Interactive | null = null;
   let activePointer: number | null = null;
@@ -808,7 +823,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   }
   function onPointerMove(event: PointerEvent) {
     lastActivity = performance.now();
-    if (downAt.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > 7) dragged = true;
+    if (Math.hypot(event.clientX - downX, event.clientY - downY) > 7) dragged = true;
     if (panel.visible && activePointer === event.pointerId && dragged) {
       const unitsPerPixel = 2 * (camera.position.z - panel.position.z) * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / host.clientHeight;
       scrollPanel(panelScroll + (lastPointerY - event.clientY) * unitsPerPixel);
@@ -821,7 +836,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     if (!hoverFrame) hoverFrame = requestAnimationFrame(hoverHitTest);
   }
   function onPointerDown(event: PointerEvent) {
-    downAt.set(event.clientX, event.clientY);
+    downX = event.clientX; downY = event.clientY;
     dragged = false;
     pressed = hitTest(event);
     highlight(pressed);

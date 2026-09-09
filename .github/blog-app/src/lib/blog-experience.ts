@@ -50,7 +50,9 @@ export function highlightedParts(text: string, query: string) {
       const positions: number[] = []; let joined = "";
       chars.forEach((char,i) => {
         const part = charPart(char, mode);
-        joined += part; positions.push(...Array(part.length).fill(i));
+        joined += part;
+        // Plain loop instead of spreading a temp array per character; this runs per result per keystroke.
+        for (let k = 0; k < part.length; k++) positions.push(i);
       });
       for (let at = joined.indexOf(term); at >= 0; at = joined.indexOf(term, at + term.length)) {
         for (let i = at; i < at + term.length; i++) hits.add(positions[i]);
