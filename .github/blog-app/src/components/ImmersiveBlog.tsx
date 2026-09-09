@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+
 import { SearchNotebook } from "./SearchNotebook";
 import { blogTree, type BlogFile, type BlogTreeNode } from "@/generated/blog-data";
 import { files, parseRoute, routeHash, readLocal, writeLocal, searchFiles, suggestions, highlightedParts, warmSearch, type Quality, type Route } from "@/lib/blog-experience";
@@ -103,6 +104,7 @@ export function ImmersiveBlog() {
     <nav className={`floating-nav ${awake || editing || settings || simple ? "" : "is-idle"}`} aria-label="快捷导航">
       <button aria-current={route.view === "home" ? "page" : undefined} onClick={() => navigate3D({view:"home"})}>全景</button><button aria-current={route.view === "shelf" || route.view === "category" ? "page" : undefined} onClick={() => navigate3D({view:"shelf"})}>知识目录</button><button aria-current={route.view === "recent" ? "page" : undefined} onClick={() => navigate3D({view:"recent"})}>最近更新</button><button onClick={openSearch}>搜索 <kbd>⌘/Ctrl K</kbd></button><button aria-expanded={settings} onClick={() => {setSimple(false); setSettings(!settings); completeIntro();}}>画质</button><button onClick={explore}>随便看看</button><button onClick={() => {setSimple(!simple); completeIntro();}}>{simple ? "三维博客" : "简洁博客"}</button>
     </nav>
+
     {settings && <section className="quality-menu" aria-label="画质设置"><label>画质模式<select value={quality} onChange={e => {const value = e.target.value as Quality; setQuality(value); writeLocal("golemon-quality", value);}}><option value="high">高画质 · 完整光影</option><option value="balanced">平衡 · 流畅优先</option><option value="eco">节能 · 低功耗</option></select></label><p>后台暂停绘制，静止时自动降低帧率。</p><button onClick={() => setSettings(false)}>完成</button></section>}
     {tour && ready && !simple && <aside className="first-visit" aria-label="首次访问提示"><strong>欢迎来到 Golemon 的三维博客</strong><p>拖动旋转场景 · 滚轮缩放<br/>点击书本查看分类 · 点击文章前往 GitHub</p><button onClick={completeIntro}>知道了</button></aside>}
     {label && !simple && <div className="object-label" role="status">{label}</div>}

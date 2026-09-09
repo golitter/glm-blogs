@@ -8,7 +8,7 @@ import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js"
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 
 import { blogTree, markdownCount, recentFiles, type BlogFile, type BlogTreeNode } from "@/generated/blog-data";
-import { PROFILE_URL, CSDN_URL } from "@/lib/constants";
+import { PROFILE_URL, CSDN_URL, REPO_URL } from "@/lib/constants";
 import { shelfLayout } from "@/lib/shelf-layout";
 import { searchFiles, nodes, updateInfo, type Route, type Quality } from "@/lib/blog-experience";
 
@@ -334,7 +334,41 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     mesh(cached("lampshade", () => new THREE.ConeGeometry(.8, .65, 32, 1, true)), toon(PALETTE.sage), world, [x, 8.3, -3.6]);
     mesh(cached("bulb", () => new THREE.SphereGeometry(.19, 16, 12)), bulbMaterial, world, [x, 8.05, -3.6]);
   }
-  const garlandPoints = Array.from({length: 33}, (_, i) => new THREE.Vector3(-10 + i * .625, 10.9 - Math.sin(i / 32 * Math.PI) * 1.2, -5.1));
+  // The balloon and its tether share the room's coordinates, attached to the right lamp post.
+  const repoBalloon = new THREE.Group();
+  repoBalloon.position.set(10, 9, -3.6);
+  world.add(repoBalloon);
+  // Matte fabric panels echo the cream arches and sage book covers.
+  const balloonCenter = new THREE.Vector3(1.55, 2.15, 0);
+  for (let panelIndex = 0; panelIndex < 12; panelIndex++) {
+    const panelGeometry = new THREE.SphereGeometry(1, 3, 12, panelIndex * Math.PI / 6, Math.PI / 6);
+    const fabric = mesh(panelGeometry, toon(panelIndex % 3 === 0 ? 0xb6c99d : 0xeee5c9), repoBalloon, balloonCenter.toArray() as [number,number,number]);
+    fabric.scale.set(1.12, 1.36, 1.02);
+  }
+  mesh(new THREE.ConeGeometry(.12, .19, 8), toon(PALETTE.sage), repoBalloon, [1.55,.75,0]);
+  for (const sign of [-1,1]) {
+    const ribbon = sphere(repoBalloon,[1.55 + sign * .17,.7,.12],[.22,.11,.07],PALETTE.sage);
+    ribbon.rotation.z = sign * .35;
+  }
+  const tether = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0,0,0), new THREE.Vector3(.48,-.2,0),
+    new THREE.Vector3(1.05,.1,0), new THREE.Vector3(1.55,.72,0),
+  ]);
+  mesh(new THREE.TubeGeometry(tether,24,.022,5,false), goldMaterial, repoBalloon, [0,0,0]);
+  const tie = mesh(new THREE.TorusGeometry(.1,.026,8,16), goldMaterial, repoBalloon, [0,0,0]);
+  tie.rotation.x = Math.PI / 2;
+  // Links are actual hanging tags below the balloon, not buttons pasted on its skin.
+  for (const x of [1.05,2.05]) {
+    mesh(new THREE.CylinderGeometry(.018,.018,1.18,5),goldMaterial,repoBalloon,[x,.08,.12]);
+  }
+  for (const [label,url,y] of [["GitHub 仓库",REPO_URL,.27],["Issues 留言",`${REPO_URL}/issues`,-.3]] as const) {
+    const link = new THREE.Group(); link.position.set(1.55,y,.16); link.userData.name = label; repoBalloon.add(link);
+    rounded(link,[2.08,.47,.14],[0,0,0],label.startsWith("GitHub") ? PALETTE.paper : 0xd4dfba,.09);
+    for (const side of [1,-1]) {
+      const text = textPlane(label,1.8,.32,{color:"#53633d",weight:600}); text.position.z = side * .08; text.rotation.y = side === 1 ? 0 : Math.PI; link.add(text);
+    }
+    interactive(link, () => window.open(url,"_blank","noopener,noreferrer"));
+  }  const garlandPoints = Array.from({length: 33}, (_, i) => new THREE.Vector3(-10 + i * .625, 10.9 - Math.sin(i / 32 * Math.PI) * 1.2, -5.1));
   mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(garlandPoints), 48, .025, 5, false), goldMaterial, world, [0, 0, 0]);
   for (let i = 0; i < 13; i++) {
     const x = -9.5 + i * 19 / 12;
@@ -507,6 +541,9 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   sphere(bow, [-.18, 0, 0], [.28, .18, .11], PALETTE.sage);
   sphere(bow, [.18, 0, 0], [.28, .18, .11], PALETTE.sage);
   sphere(bow, [0, 0, .05], [.1, .1, .08], PALETTE.gold);
+  let birdJumpAt = -Infinity;
+  bird.userData.name = "小鸟 · 点击跳一跳";
+  interactive(bird, () => { birdJumpAt = performance.now(); lastActivity = birdJumpAt; });
 
   const searchConsole = new THREE.Group();
   searchConsole.position.set(0, 1.95, 1.95);
@@ -850,7 +887,6 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     const idleFor = performance.now() - lastActivity;
     const active = movingCamera || idleFor < 1800;
     if (!reduced.matches && !low) {
-      bird.position.y = 2.55 + Math.sin(t * 1.2) * .08;
       board.rotation.z = Math.sin(t * .35) * .006;
       titleBoard.rotation.z = Math.sin(t * .28) * .006;
       const pulse = .48 + Math.sin(t * 1.7) * .2;
@@ -858,6 +894,10 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       const glowPulse = .035 + Math.sin(t * 1.7) * .02;
       for (const glow of glowCache.values()) glow.emissiveIntensity = glowPulse;
     }
+    const jumpProgress = (performance.now() - birdJumpAt) / 850;
+    const jumpHeight = jumpProgress < 1 ? Math.sin(Math.PI * Math.max(0, jumpProgress)) * (reduced.matches ? .25 : 1.65) : 0;
+    bird.position.y = 2.55 + jumpHeight + (!reduced.matches && !low && jumpProgress >= 1 ? Math.sin(t * 1.2) * .08 : 0);
+    if (jumpProgress < 1 || jumpProgress < 1.1) renderer.shadowMap.needsUpdate = true;
     if (movingCamera) {
       camera.position.lerp(desiredPosition, .075);
       controls.target.lerp(desiredTarget, .075);
@@ -983,4 +1023,3 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     },
   };
 }
-
