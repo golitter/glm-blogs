@@ -135,7 +135,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     item.scale.set(...scale);
     return item;
   }
-  function textPlane(text: string, width: number, height: number, options: { color?: string; size?: number; weight?: number; align?: CanvasTextAlign; background?: string; border?: string } = {}) {
+  function textPlane(text: string, width: number, height: number, options: { color?: string; size?: number; weight?: number; align?: CanvasTextAlign; background?: string; border?: string; emphasis?: string } = {}) {
     const canvas = document.createElement("canvas");
     canvas.width = 1024;
     canvas.height = Math.round(1024 * height / width);
@@ -168,6 +168,24 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     const lineHeight = size * 1.08;
     lines.forEach((line, index) => {
       const y = canvas.height / 2 + (index - (lines.length - 1) / 2) * lineHeight;
+      const at = options.emphasis ? line.indexOf(options.emphasis) : -1;
+      if (at >= 0) {
+        const boldFont = `700 ${size}px "Microsoft YaHei", "PingFang SC", sans-serif`;
+        const parts = [line.slice(0, at), options.emphasis!, line.slice(at + options.emphasis!.length)];
+        const widths = parts.map((part, i) => { context.font = i === 1 ? boldFont : font(); return context.measureText(part).width; });
+        let x = (canvas.width - widths.reduce((sum, value) => sum + value, 0)) / 2;
+        const restore = context.textAlign;
+        context.textAlign = "left";
+        parts.forEach((part, i) => {
+          context.font = i === 1 ? boldFont : font();
+          context.fillStyle = i === 1 ? "#241f16" : options.color ?? PALETTE.ink;
+          context.fillText(part, x, y);
+          x += widths[i];
+        });
+        context.textAlign = restore;
+        context.fillStyle = options.color ?? PALETTE.ink;
+        return;
+      }
       context.fillText(line, context.textAlign === "left" ? 38 : canvas.width / 2, y, canvas.width - 70);
     });
     const texture = new THREE.CanvasTexture(canvas);
@@ -303,7 +321,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   backDescription.position.z = -.2;
   backDescription.rotation.y = Math.PI;
   titleBoard.add(backDescription);
-  const subtitle = textPlane(`${markdownCount} 篇笔记 · 拖动环绕 360° · 点击书本阅读`, 8.3, .32, { weight: 400, color: "#998d71" });
+  const subtitle = textPlane(`${markdownCount} 篇笔记 · 拖动环绕 360° · 点击书本阅读`, 8.3, .32, { weight: 400, color: "#998d71", emphasis: `${markdownCount} 篇笔记` });
   subtitle.position.set(0, -.72, .2);
   titleBoard.add(subtitle);
 
