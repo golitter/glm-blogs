@@ -67,6 +67,10 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   renderer.setPixelRatio(pixelRatio);
   renderer.setSize(host.clientWidth, host.clientHeight);
   renderer.shadowMap.enabled = quality === "high";
+  // Only the bird's sub-texel bob animates continuously, so the shadow map is rendered once and
+  // refreshed on demand (hover pulls, panel show/hide) instead of every frame.
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
   renderer.localClippingEnabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -118,6 +122,20 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     return materialCache.get(color)!;
   }
   const goldMaterial = new THREE.MeshPhysicalMaterial({ color: PALETTE.gold, metalness: 0.68, roughness: 0.25, clearcoat: 0.5 });
+  // Beacon and hover-glow materials pulse in unison, so share one instance per colour instead of one per object.
+  const beaconFresh = new THREE.MeshBasicMaterial({ color: 0xe7bd62, transparent: true, opacity: .65 });
+  const beaconCalm = new THREE.MeshBasicMaterial({ color: 0xfff7d5, transparent: true, opacity: .65 });
+  const glowCache = new Map<THREE.MeshToonMaterial, THREE.MeshToonMaterial>();
+  function glowFor(base: THREE.MeshToonMaterial) {
+    let glow = glowCache.get(base);
+    if (!glow) {
+      glow = base.clone();
+      glow.emissive.set(0xe8c27b);
+      glow.emissiveIntensity = .035;
+      glowCache.set(base, glow);
+    }
+    return glow;
+  }
 
   function mesh(geometry: THREE.BufferGeometry, material: THREE.Material, parent: THREE.Object3D, position: [number, number, number]) {
     const item = new THREE.Mesh(geometry, material);
@@ -127,11 +145,24 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     parent.add(item);
     return item;
   }
-  function rounded(parent: THREE.Object3D, size: [number, number, number], position: [number, number, number], color: number, radius = 0.12) {
-    return mesh(new RoundedBoxGeometry(...size, low ? 1 : 4, radius), toon(color), parent, position);
+  // Identical parameter sets repeat throughout the room (boards, seams, book stripes, pots), so
+  // geometries are cached by key instead of rebuilt for every mesh.
+  const geometryCache = new Map<string, THREE.BufferGeometry>();
+  function cached<T extends THREE.BufferGeometry>(key: string, build: () => T) {
+    let geometry = geometryCache.get(key) as T | undefined;
+    if (!geometry) geometryCache.set(key, geometry = build());
+    return geometry;
   }
+  function rounded(parent: THREE.Object3D, size: [number, number, number], position: [number, number, number], color: number, radius = 0.12) {
+    const segments = low ? 1 : 4;
+    const geometry = cached(`r:${size.join(",")};${segments};${radius}`, () => new RoundedBoxGeometry(...size, segments, radius));
+    return mesh(geometry, toon(color), parent, position);
+  }
+  // Every sphere in a given quality tier has identical segments, so one unit sphere is reused (scaled per mesh).
   function sphere(parent: THREE.Object3D, position: [number, number, number], scale: [number, number, number], color: number) {
-    const item = mesh(new THREE.SphereGeometry(1, low ? 10 : compact.matches ? 16 : 28, low ? 8 : 18), toon(color), parent, position);
+    const width = low ? 10 : compact.matches ? 16 : 28, height = low ? 8 : 18;
+    const geometry = cached(`s:${width}x${height}`, () => new THREE.SphereGeometry(1, width, height));
+    const item = mesh(geometry, toon(color), parent, position);
     item.scale.set(...scale);
     return item;
   }
@@ -208,7 +239,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     let glow: THREE.MeshToonMaterial | undefined;
     if (!panel) root.traverse(object => {
       if (!glow && object instanceof THREE.Mesh && object.material instanceof THREE.MeshToonMaterial) {
-        glow = object.material.clone(); glow.emissive.set(0xe8c27b); glow.emissiveIntensity = .035; object.material = glow;
+        glow = glowFor(object.material); object.material = glow;
       }
     });
     const record = { root, action, baseScale: root.scale.clone(), basePosition: root.position.clone(), name: root.userData.name ?? labels[0] ?? "查看", glow };
@@ -268,8 +299,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     pot.position.set(x, .1, z);
     pot.scale.setScalar(scale);
     world.add(pot);
-    mesh(new THREE.CylinderGeometry(.53, .37, .85, 24), toon(PALETTE.blush), pot, [0, .43, 0]);
-    mesh(new THREE.CylinderGeometry(.48, .48, .06, 24), toon(PALETTE.brown), pot, [0, .86, 0]);
+    mesh(cached("pot", () => new THREE.CylinderGeometry(.53, .37, .85, 24)), toon(PALETTE.blush), pot, [0, .43, 0]);
+    mesh(cached("pot-rim", () => new THREE.CylinderGeometry(.48, .48, .06, 24)), toon(PALETTE.brown), pot, [0, .86, 0]);
     for (let i = 0; i < 8; i++) {
       const a = i * 2.4;
       const leaf = sphere(pot, [Math.cos(a) * .4, 1.3 + i * .13, Math.sin(a) * .4], [.2, .68, .13], i % 2 ? 0x789768 : 0xa6c182);
@@ -295,10 +326,11 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   rearSignature.rotation.y = Math.PI;
   rearPlaque.add(rearSignature);
   // Warm hanging lights and a little garland, built from actual geometry.
+  const bulbMaterial = new THREE.MeshBasicMaterial({color: 0xffe6ac});
   for (const x of [-10, 10]) {
     rounded(world, [.07, 3, .07], [x, 10, -3.6], PALETTE.gold, .02);
-    mesh(new THREE.ConeGeometry(.8, .65, 32, 1, true), toon(PALETTE.sage), world, [x, 8.3, -3.6]);
-    mesh(new THREE.SphereGeometry(.19, 16, 12), new THREE.MeshBasicMaterial({color: 0xffe6ac}), world, [x, 8.05, -3.6]);
+    mesh(cached("lampshade", () => new THREE.ConeGeometry(.8, .65, 32, 1, true)), toon(PALETTE.sage), world, [x, 8.3, -3.6]);
+    mesh(cached("bulb", () => new THREE.SphereGeometry(.19, 16, 12)), bulbMaterial, world, [x, 8.05, -3.6]);
   }
   const garlandPoints = Array.from({length: 33}, (_, i) => new THREE.Vector3(-10 + i * .625, 10.9 - Math.sin(i / 32 * Math.PI) * 1.2, -5.1));
   mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(garlandPoints), 48, .025, 5, false), goldMaterial, world, [0, 0, 0]);
@@ -392,7 +424,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     // Front cover stays aligned; the paper block grows backwards with content.
     rounded(group, [1.25, 2.3, thickness], [0, 0, (.65 - thickness) / 2], color.getHex(), .11);
     for (let i = 0; i < Math.min(node.children.length, 6); i++) rounded(group, [.055, .12, .035], [-.4 + i * .16, -.95, .36], PALETTE.gold, .01);
-    const signal = mesh(new THREE.SphereGeometry(.055, 8, 6), new THREE.MeshBasicMaterial({color: age < 7 * 86400000 ? 0xe7bd62 : 0xfff7d5, transparent:true, opacity:.65}), group, [.43, .96, .39]);
+    const signal = mesh(cached("beacon", () => new THREE.SphereGeometry(.055, 8, 6)), age < 7 * 86400000 ? beaconFresh : beaconCalm, group, [.43, .96, .39]);
     signal.userData.beacon = true;
     if (categoryFiles.some(file => updateInfo(file).isNew)) {
       rounded(group, [.19, .44, .05], [.35, 1.05, .39], PALETTE.gold, .02);
@@ -506,6 +538,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   scene.add(panel);
   let panelTitle = "";
   let panelFiles: DirectoryEntry[] = [];
+  let panelPortrait = false;
   let panelScroll = 0;
   let searchQuery = "";
   const directoryStack: BlogTreeNode[] = [];
@@ -539,6 +572,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   }
   function clearPanel() {
     resetHover();
+    renderer.shadowMap.needsUpdate = true;
     outline.selectedObjects = [];
     for (const record of panelInteractives) {
       const index = interactives.indexOf(record);
@@ -594,7 +628,9 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     panelFiles = files;
     panelScroll = scrollOffset;
     panel.visible = true;
+    renderer.shadowMap.needsUpdate = true;
     const portrait = compact.matches;
+    panelPortrait = portrait;
     panel.position.y = portrait ? 6 : 5;
     rounded(panel, [portrait ? 7.25 : 14.8, portrait ? 10.3 : 8.8, .42], [0, 0, 0], 0xc9b78e, .26);
     if (portrait) {
@@ -673,7 +709,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   const pointer = new THREE.Vector2();
   let hovered: Interactive | null = null;
   function resetHover() {
-    if (hovered) { hovered.root.scale.copy(hovered.baseScale); hovered.root.position.copy(hovered.basePosition); }
+    if (hovered) { hovered.root.scale.copy(hovered.baseScale); hovered.root.position.copy(hovered.basePosition); renderer.shadowMap.needsUpdate = true; }
     hovered = null; outline.selectedObjects = []; options.onHover("");
   }
   function highlight(record: Interactive | null) {
@@ -683,6 +719,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     record.root.scale.copy(record.baseScale).multiplyScalar(1.035);
     // Pull books out of the cabinet; lift other labels without changing hit areas.
     record.root.position.z = record.basePosition.z + (record.root.userData.book ? .25 : .055);
+    renderer.shadowMap.needsUpdate = true;
     outline.selectedObjects = [record.root]; options.onHover(record.name);
   }
   let downAt = new THREE.Vector2();
@@ -714,6 +751,18 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     }
     return null;
   }
+  let hoverPointer: PointerEvent | null = null;
+  let hoverFrame = 0;
+  // Raycasting the whole scene is costly and pointermove can outpace the display; test at most once per frame.
+  function hoverHitTest() {
+    hoverFrame = 0;
+    if (disposed) return;
+    const event = hoverPointer;
+    if (!event) return;
+    hoverPointer = null;
+    highlight(hitTest(event));
+    renderer.domElement.style.cursor = hovered ? "pointer" : "grab";
+  }
   function onPointerMove(event: PointerEvent) {
     lastActivity = performance.now();
     if (downAt.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > 7) dragged = true;
@@ -723,9 +772,10 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       lastPointerY = event.clientY;
       return;
     }
-    const next = hitTest(event);
-    highlight(next);
-    renderer.domElement.style.cursor = hovered ? "pointer" : "grab";
+    // While orbit-dragging the hover target is meaningless; skip the raycast entirely.
+    if (dragged && activePointer !== null) { resetHover(); renderer.domElement.style.cursor = "grabbing"; return; }
+    hoverPointer = event;
+    if (!hoverFrame) hoverFrame = requestAnimationFrame(hoverHitTest);
   }
   function onPointerDown(event: PointerEvent) {
     downAt.set(event.clientX, event.clientY);
@@ -783,21 +833,22 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   let disposed = false;
   let frame = 0;
   let renderTimeout: ReturnType<typeof setTimeout>;
-  const beacons: THREE.Mesh[] = [];
-  world.traverse(object => { if (object instanceof THREE.Mesh && object.userData.beacon) beacons.push(object); });
   const timer = new THREE.Timer();
   timer.connect(document);
   function animate(timestamp?: number) {
     if (disposed || document.hidden) return;
     timer.update(timestamp);
     const t = timer.getElapsed();
-    const active = movingCamera || performance.now() - lastActivity < 1800;
+    const idleFor = performance.now() - lastActivity;
+    const active = movingCamera || idleFor < 1800;
     if (!reduced.matches && !low) {
       bird.position.y = 2.55 + Math.sin(t * 1.2) * .08;
       board.rotation.z = Math.sin(t * .35) * .006;
       titleBoard.rotation.z = Math.sin(t * .28) * .006;
-      for (const beacon of beacons) (beacon.material as THREE.MeshBasicMaterial).opacity = .48 + Math.sin(t * 1.7) * .2;
-      for (const item of interactives) if (item.glow) item.glow.emissiveIntensity = .035 + Math.sin(t * 1.7) * .02;
+      const pulse = .48 + Math.sin(t * 1.7) * .2;
+      beaconFresh.opacity = pulse; beaconCalm.opacity = pulse;
+      const glowPulse = .035 + Math.sin(t * 1.7) * .02;
+      for (const glow of glowCache.values()) glow.emissiveIntensity = glowPulse;
     }
     if (movingCamera) {
       camera.position.lerp(desiredPosition, .075);
@@ -810,8 +861,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     }
     if (!movingCamera) controls.update();
     if (low) renderer.render(scene, camera); else composer.render();
-    // No animation work while hidden; idle scenes redraw at 6–12 fps.
-    const fps = active ? (quality === "high" ? 60 : 30) : low ? 6 : 12;
+    // No animation work while hidden; idle scenes redraw at 6–12 fps, dropping to 3 fps once deeply idle.
+    const fps = active ? (quality === "high" ? 60 : 30) : idleFor > 30000 ? 3 : low ? 6 : 12;
     renderTimeout = setTimeout(() => { frame = requestAnimationFrame(animate); }, Math.max(0, 1000 / fps - 16));
   }
   function visibilityChanged() { clearTimeout(renderTimeout); cancelAnimationFrame(frame); if (!document.hidden) { lastActivity = performance.now(); frame = requestAnimationFrame(animate); } }
@@ -829,7 +880,12 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     composer.setSize(width, height);
     outline.resolution.set(width, height);
     suppressRoute = true;
-    if (currentView === "panel") showPanel(panelTitle, panelFiles, panelScroll);
+    if (currentView === "panel") {
+      // Rebuilding every row (canvas textures, cloned materials) is costly; the layout only depends on
+      // portrait vs landscape, so plain resizes just refit the camera.
+      if (compact.matches !== panelPortrait) showPanel(panelTitle, panelFiles, panelScroll);
+      else fitView(panel.position.clone(), panelPortrait ? 7.7 : 15.8, panelPortrait ? 11 : 9.8);
+    }
     else if (currentView === "shelf") shelfView();
     else if (currentView === "recent") recentView();
     else homeView();
@@ -890,6 +946,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       clearTimeout(renderTimeout); clearTimeout(historyTimer);
       cancelAnimationFrame(frame);
       cancelAnimationFrame(readyFrame);
+      cancelAnimationFrame(hoverFrame);
       resizer.disconnect();
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
       renderer.domElement.removeEventListener("pointerdown", onPointerDown);

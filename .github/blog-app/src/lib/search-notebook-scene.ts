@@ -20,12 +20,15 @@ export function createSearchNotebook(host: HTMLElement) {
     const mesh = new THREE.Mesh(new RoundedBoxGeometry(w,h,d,3,r),material);
     mesh.position.set(x,y,z); book.add(mesh); return mesh;
   }
-  let disposed = false, frame = 0;
+  let disposed = false, frame = 0, lastSize = "";
   function resize() {
     if (disposed) return;
-    book.traverse(obj => {if (obj instanceof THREE.Mesh) obj.geometry.dispose();}); book.clear();
     const width = host.clientWidth, height = host.clientHeight;
-    if (!width || !height) return;
+    // Rebuilding all geometry is wasteful; skip when the measured size has not actually changed.
+    const size = `${width}x${height}`;
+    if (!width || !height || size === lastSize) return;
+    lastSize = size;
+    book.traverse(obj => {if (obj instanceof THREE.Mesh) obj.geometry.dispose();}); book.clear();
     renderer.setSize(width,height);
     camera.left = -width/200; camera.right = width/200; camera.top = height/200; camera.bottom = -height/200; camera.updateProjectionMatrix();
     const w = width/100 - .32, h = height/100 - .35;

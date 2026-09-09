@@ -29,14 +29,27 @@ export function searchFiles(query: string) {
   }
   return index!.filter(item => terms.every(q => item.text.includes(q) || item.phonetic.includes(q) || item.initials.includes(q))).map(item => item.file);
 }
+// Per-character romanisation repeats heavily across rows and keystrokes; cache it once per char and mode.
+const charPartCache = new Map<string, string>();
+function charPart(char: string, mode: "text" | "pinyin" | "initials") {
+  const key = mode + char;
+  let part = charPartCache.get(key);
+  if (part === undefined) {
+    part = mode === "text" ? normalize(char) : normalize(pinyinFn!(char, {toneType:"none", ...(mode === "initials" ? {pattern:"first" as const} : {})}));
+    charPartCache.set(key, part);
+  }
+  return part;
+}
 export function highlightedParts(text: string, query: string) {
   const chars = Array.from(text), hits = new Set<number>();
+  const terms = query.trim().split(/\s+/).map(normalize).filter(Boolean);
+  if (!terms.length) return [{text, hit: false}];
   if (!pinyinFn) { warmSearch(); return [{text, hit: false}]; }
-  for (const term of query.trim().split(/\s+/).map(normalize).filter(Boolean)) {
-    for (const mode of ["text", "pinyin", "initials"]) {
+  for (const term of terms) {
+    for (const mode of ["text", "pinyin", "initials"] as const) {
       const positions: number[] = []; let joined = "";
       chars.forEach((char,i) => {
-        const part = mode === "text" ? normalize(char) : normalize(pinyinFn!(char, {toneType:"none", ...(mode === "initials" ? {pattern:"first" as const} : {})}));
+        const part = charPart(char, mode);
         joined += part; positions.push(...Array(part.length).fill(i));
       });
       for (let at = joined.indexOf(term); at >= 0; at = joined.indexOf(term, at + term.length)) {
@@ -44,7 +57,14 @@ export function highlightedParts(text: string, query: string) {
       }
     }
   }
-  return chars.map((char,i) => ({text:char, hit:hits.has(i)}));
+  // Merge consecutive same-hit characters into runs so the renderer produces one node per segment, not per character.
+  const parts: {text: string; hit: boolean}[] = [];
+  for (let i = 0; i < chars.length; i++) {
+    const hit = hits.has(i), last = parts[parts.length - 1];
+    if (last && last.hit === hit) last.text += chars[i];
+    else parts.push({text: chars[i], hit});
+  }
+  return parts;
 }
 export function suggestions(query: string) {
   const q = normalize(query);

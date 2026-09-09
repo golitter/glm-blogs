@@ -13,7 +13,7 @@ function StaticNode({node}: {node: BlogTreeNode}) {
   return <details><summary>{node.name} <small>{node.count} 篇</small></summary><ul>{node.files.map(file => <li key={file.path}><a href={file.url} target="_blank" rel="noreferrer">{file.title}</a></li>)}</ul>{node.children.map(child => <StaticNode key={child.path} node={child}/>)}</details>;
 }
 // Start fetching the three.js scene while this module evaluates, before React mounts; reuse across quality rebuilds.
-let sceneModule: Promise<typeof import("@/lib/immersive-blog-scene")> | null = null;
+const sceneModule: Promise<typeof import("@/lib/immersive-blog-scene")> = import("@/lib/immersive-blog-scene");
 // Workflow builds stamp China time at deploy; local dev falls back to the current Shanghai time.
 const BUILD_TIME = import.meta.env.VITE_BUILD_TIME
   ?? new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replace(/\//g, "-");
@@ -59,14 +59,15 @@ export function ImmersiveBlog() {
     window.addEventListener("hashchange", change); return () => window.removeEventListener("hashchange", change);
   }, []);
   useEffect(() => {
-    // Warm the pinyin search index once the scene has had the CPU to itself for a moment.
-    const timer = setTimeout(() => { warmSearch().then(() => setSearchReady(true)).catch(() => {}); }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    // Warm the pinyin search index only after the scene is ready (or in simple mode), so its
+    // download + index build never competes with three.js scene initialisation for the main thread.
+    if (!ready && !simple) return;
+    warmSearch().then(() => setSearchReady(true)).catch(() => {});
+  }, [ready, simple]);
   useEffect(() => {
     if (simple || !host.current) return;
     const element = host.current; let cancelled = false; setReady(false); setError(false);
-    (sceneModule ??= import("@/lib/immersive-blog-scene")).then(({createImmersiveBlog}) => {
+    sceneModule.then(({createImmersiveBlog}) => {
       if (cancelled) return;
       api.current = createImmersiveBlog(element, {
         quality, onReady: () => setReady(true), onSearchRequest: openSearch, onInteraction: completeIntro, onHover: setLabel,
@@ -93,14 +94,14 @@ export function ImmersiveBlog() {
   useEffect(() => { if (random && ready && !simple && route.view === "shelf") api.current?.previewArticle(random); }, [random, ready, simple, route.view]);
   return <main className="immersive-root">
     <div ref={host} className="webgl-world" aria-label="Golemon Blogs 三维博客" hidden={simple}/>
-    {!ready && !simple && <div className="loading-screen" role="status"><span className="loading-bird">♧</span><p>正在进入三维博客页面…</p><button onClick={() => setSimple(true)}>先看简洁目录</button></div>}
+    {!ready && !simple && <div className="loading-screen" role="status"><span className="loading-bird">♧</span><p>正在进入三维博客页面…</p><button onClick={() => setSimple(true)}>先看简洁博客</button></div>}
     <nav className={`floating-nav ${awake || editing || settings || simple ? "" : "is-idle"}`} aria-label="快捷导航">
-      <button aria-current={route.view === "home" ? "page" : undefined} onClick={() => navigate3D({view:"home"})}>全景</button><button aria-current={route.view === "shelf" || route.view === "category" ? "page" : undefined} onClick={() => navigate3D({view:"shelf"})}>知识目录</button><button aria-current={route.view === "recent" ? "page" : undefined} onClick={() => navigate3D({view:"recent"})}>最近更新</button><button onClick={openSearch}>搜索 <kbd>⌘/Ctrl K</kbd></button><button aria-expanded={settings} onClick={() => {setSimple(false); setSettings(!settings); completeIntro();}}>画质</button><button onClick={explore}>随便看看</button><button onClick={() => {setSimple(!simple); completeIntro();}}>{simple ? "三维书房" : "简洁目录"}</button>
+      <button aria-current={route.view === "home" ? "page" : undefined} onClick={() => navigate3D({view:"home"})}>全景</button><button aria-current={route.view === "shelf" || route.view === "category" ? "page" : undefined} onClick={() => navigate3D({view:"shelf"})}>知识目录</button><button aria-current={route.view === "recent" ? "page" : undefined} onClick={() => navigate3D({view:"recent"})}>最近更新</button><button onClick={openSearch}>搜索 <kbd>⌘/Ctrl K</kbd></button><button aria-expanded={settings} onClick={() => {setSimple(false); setSettings(!settings); completeIntro();}}>画质</button><button onClick={explore}>随便看看</button><button onClick={() => {setSimple(!simple); completeIntro();}}>{simple ? "三维博客" : "简洁博客"}</button>
     </nav>
     {settings && <section className="quality-menu" aria-label="画质设置"><label>画质模式<select value={quality} onChange={e => {const value = e.target.value as Quality; setQuality(value); writeLocal("golemon-quality", value);}}><option value="high">高画质 · 完整光影</option><option value="balanced">平衡 · 流畅优先</option><option value="eco">节能 · 低功耗</option></select></label><p>后台暂停绘制，静止时自动降低帧率。</p><button onClick={() => setSettings(false)}>完成</button></section>}
-    {tour && ready && !simple && <aside className="first-visit" aria-label="首次访问提示"><strong>欢迎来到 Golemon 的书房</strong><p>拖动旋转场景 · 滚轮缩放<br/>点击书本查看分类 · 点击文章前往 GitHub</p><button onClick={completeIntro}>知道了</button></aside>}
+    {tour && ready && !simple && <aside className="first-visit" aria-label="首次访问提示"><strong>欢迎来到 Golemon 的三维博客</strong><p>拖动旋转场景 · 滚轮缩放<br/>点击书本查看分类 · 点击文章前往 GitHub</p><button onClick={completeIntro}>知道了</button></aside>}
     {label && !simple && <div className="object-label" role="status">{label}</div>}
-    {simple && <section className="static-directory"><h1>Golemon Blogs · 简洁目录</h1><p className="directory-intro">记录大模型、智能体与系统工程相关的学习与实践。</p>{error && <p role="status">三维渲染暂不可用，所有文章仍可在这里访问。</p>}<p>共 {files.length} 篇文章 · 点击后前往 GitHub · <a href="./directory.html">无脚本目录</a></p>{route.view === "search" ? <><h2>搜索：{route.q || "全部文章"}</h2><button onClick={() => navigate({view:"shelf"})}>返回全部分类</button><ul>{searchFiles(route.q ?? "").map(file => <li key={file.path}><a href={file.url} target="_blank" rel="noreferrer">{file.title}</a></li>)}</ul></> : blogTree.map(node => <StaticNode key={node.path} node={node}/>)}</section>}
+    {simple && <section className="static-directory"><h1>Golemon Blogs · 简洁博客</h1><p className="directory-intro">记录大模型、智能体与系统工程相关的学习与实践。</p>{error && <p role="status">三维渲染暂不可用，所有文章仍可在这里访问。</p>}<p>共 {files.length} 篇文章 · 点击后前往 GitHub · <a href="./directory.html">无脚本目录</a></p>{route.view === "search" ? <><h2>搜索：{route.q || "全部文章"}</h2><button onClick={() => navigate({view:"shelf"})}>返回全部分类</button><ul>{searchFiles(route.q ?? "").map(file => <li key={file.path}><a href={file.url} target="_blank" rel="noreferrer">{file.title}</a></li>)}</ul></> : blogTree.map(node => <StaticNode key={node.path} node={node}/>)}</section>}
     <div className="search-editor" hidden={!editing}><div className="search-notebook">{editing && !simple && <SearchNotebook/>}<form role="dialog" aria-modal="true" aria-labelledby="search-heading" onSubmit={event => {event.preventDefault(); if (selected >= 0 && results[selected]) {remember(query); window.open(results[selected].url,"_blank","noopener,noreferrer");} else submit();}} onKeyDown={event => {
       event.stopPropagation(); if (event.nativeEvent.isComposing) return;
       if (event.key === "Escape") closeSearch();
