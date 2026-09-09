@@ -100,20 +100,23 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   controls.autoRotate = false;
   controls.autoRotateSpeed = 0.16;
 
-  const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
-  const outline = new OutlinePass(new THREE.Vector2(host.clientWidth, host.clientHeight), scene, camera);
-  outline.edgeStrength = 3.2;
-  outline.edgeGlow = 0.35;
-  outline.edgeThickness = 1.2;
-  outline.visibleEdgeColor.set(0xffe4a0);
-  outline.hiddenEdgeColor.set(0x71865a);
-  composer.addPass(outline);
-  outline.enabled = !low;
-  const bloom = new UnrealBloomPass(new THREE.Vector2(host.clientWidth, host.clientHeight), 0.06, 0.32, 1.15);
-  bloom.enabled = quality === "high";
-  composer.addPass(bloom);
-  composer.addPass(new OutputPass());
+  // Eco mode renders directly. Avoid allocating full-screen post-processing targets that it never uses.
+  let composer: EffectComposer | null = null;
+  let outline: OutlinePass | null = null;
+  if (!low) {
+    composer = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+    outline = new OutlinePass(new THREE.Vector2(host.clientWidth, host.clientHeight), scene, camera);
+    outline.edgeStrength = 3.2;
+    outline.edgeGlow = 0.35;
+    outline.edgeThickness = 1.2;
+    outline.visibleEdgeColor.set(0xffe4a0);
+    outline.hiddenEdgeColor.set(0x71865a);
+    composer.addPass(outline);
+    if (quality === "high") composer.addPass(new UnrealBloomPass(new THREE.Vector2(host.clientWidth, host.clientHeight), 0.06, 0.32, 1.15));
+    composer.addPass(new OutputPass());
+  }
+  function selectOutline(objects: THREE.Object3D[]) { if (outline) outline.selectedObjects = objects; }
 
   const gradient = new THREE.DataTexture(new Uint8Array([80, 150, 210, 255]), 4, 1, THREE.RedFormat);
   gradient.minFilter = gradient.magFilter = THREE.NearestFilter;
@@ -495,7 +498,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   for (const x of [-2.8, 2.8]) rounded(board, [.25, 7, .22], [x, 3.6, -1.03], 0xa48c66, .04);
   const backBrace = rounded(board, [6.6, .23, .2], [0, 3.6, -1.15], 0xb7a178, .04);
   backBrace.rotation.z = .65;
-  const updateHeader = textPlane("最近更新 · NEW NOTES", 6.7, .7, { weight: 700, color: "#75654b" });
+  const updateHeader = textPlane("最近更新", 6.7, .7, { weight: 700, color: "#75654b" });
   updateHeader.position.set(0, 6.85, -.08);
   board.add(updateHeader);
   recentFiles.slice(0, 5).forEach((file, index) => {
@@ -505,11 +508,11 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     board.add(group);
     rounded(group, [6.75, .92, .18], [0, 0, 0], index === 0 ? 0xf3e4b8 : PALETTE.paper, .12);
     sphere(group, [-2.95, 0, .13], [.19, .19, .08], index === 0 ? PALETTE.sage : PALETTE.blush);
-    const label = textPlane(`${String(index + 1).padStart(2, "0")}  ${file.title}`, 4.9, .48, { weight: 600, align: "left" });
+    const label = textPlane(file.title, 4.9, .48, { weight: 600, align: "left" });
     label.position.set(-.15, .13, .11);
     group.add(label);
     const info = updateInfo(file);
-    const date = textPlane(`${info.bucket} · ${info.relative} · ${file.change === "added" ? "新增" : "修改"}${info.isNew ? " · NEW" : ""}`, 5.7, .28, { weight: 400, align: "left", color: "#8a806d" });
+    const date = textPlane(`${info.relative} · ${file.change === "added" ? "新增" : "修改"}${info.isNew ? " · NEW" : ""}`, 5.7, .28, { weight: 400, align: "left", color: "#8a806d" });
     date.position.set(.15, -.25, .115);
     group.add(date);
     interactive(group, () => window.open(file.url, "_blank", "noopener,noreferrer"));
@@ -603,7 +606,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     lastActivity = performance.now();
     panelScroll = Math.max(0, Math.min(value, scrollLimit));
     resetHover();
-    outline.selectedObjects = [];
+    selectOutline([]);
     for (const row of scrollRows) {
       row.group.position.y = row.y + panelScroll;
       const record = row.group.userData.hit as Interactive | undefined;
@@ -621,7 +624,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   function clearPanel() {
     resetHover();
     renderer.shadowMap.needsUpdate = true;
-    outline.selectedObjects = [];
+    selectOutline([]);
     for (const record of panelInteractives) {
       const index = interactives.indexOf(record);
       if (index >= 0) interactives.splice(index, 1);
@@ -767,7 +770,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   let hovered: Interactive | null = null;
   function resetHover() {
     if (hovered) { hovered.root.scale.copy(hovered.baseScale); hovered.root.position.copy(hovered.basePosition); renderer.shadowMap.needsUpdate = true; }
-    hovered = null; outline.selectedObjects = []; options.onHover("");
+    hovered = null; selectOutline([]); options.onHover("");
   }
   function highlight(record: Interactive | null) {
     if (record === hovered) return;
@@ -777,7 +780,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     // Pull books out of the cabinet; lift other labels without changing hit areas.
     record.root.position.z = record.basePosition.z + (record.root.userData.book ? .25 : .055);
     renderer.shadowMap.needsUpdate = true;
-    outline.selectedObjects = [record.root]; options.onHover(record.name);
+    selectOutline([record.root]); options.onHover(record.name);
   }
   // Plain numbers instead of a Vector2: pointermove fires faster than the display and must stay allocation-free.
   let downX = 0, downY = 0;
@@ -923,7 +926,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       }
     }
     if (!movingCamera) controls.update();
-    if (low) renderer.render(scene, camera); else composer.render();
+    if (composer) composer.render(); else renderer.render(scene, camera);
     // No animation work while hidden; idle scenes redraw at 6–12 fps, dropping to 3 fps once deeply idle.
     const fps = active ? (quality === "high" ? 60 : 30) : idleFor > 30000 ? 3 : low ? 6 : 12;
     renderTimeout = setTimeout(() => { frame = requestAnimationFrame(animate); }, Math.max(0, 1000 / fps - 16));
@@ -940,8 +943,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height);
-    composer.setSize(width, height);
-    outline.resolution.set(width, height);
+    composer?.setSize(width, height);
+    outline?.resolution.set(width, height);
     suppressRoute = true;
     if (currentView === "panel") {
       // Rebuilding every row (canvas textures, cloned materials) is costly; the layout only depends on
@@ -1031,8 +1034,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
         }
       });
       gradient.dispose();
-      composer.passes.forEach(pass => pass.dispose());
-      composer.dispose();
+      composer?.passes.forEach(pass => pass.dispose());
+      composer?.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     },

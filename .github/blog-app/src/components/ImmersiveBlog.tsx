@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
 import { SearchNotebook } from "./SearchNotebook";
@@ -20,8 +20,10 @@ const ResultList = memo(function ResultList({results, query, selected, select, r
 function StaticNode({node}: {node: BlogTreeNode}) {
   return <details><summary>{node.name} <small>{node.count} 篇</small></summary><ul>{node.files.map(file => <li key={file.path}><a href={file.url} target="_blank" rel="noreferrer">{file.title}</a></li>)}</ul>{node.children.map(child => <StaticNode key={child.path} node={child}/>)}</details>;
 }
-// Start fetching the three.js scene while this module evaluates, before React mounts; reuse across quality rebuilds.
-const sceneModule: Promise<typeof import("@/lib/immersive-blog-scene")> = import("@/lib/immersive-blog-scene");
+// Cache the scene chunk, but start fetching it after React has committed the loading screen. This gives
+// slow connections immediate feedback instead of competing with first paint during module evaluation.
+let sceneModule: Promise<typeof import("@/lib/immersive-blog-scene")> | null = null;
+function loadScene() { return sceneModule ??= import("@/lib/immersive-blog-scene"); }
 // Workflow builds stamp China time at deploy; local dev falls back to the current Shanghai time.
 const BUILD_TIME = import.meta.env.VITE_BUILD_TIME
   ?? new Date().toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }).replace(/\//g, "-");
@@ -44,7 +46,9 @@ export function ImmersiveBlog() {
   });
   const [random, setRandom] = useState<BlogFile | null>(null);
   const [searchReady, setSearchReady] = useState(false);
-  const results = useMemo(() => searchFiles(query), [query, searchReady]);
+  // Pinyin matching and highlighting can touch every result; defer that work so typing stays responsive.
+  const deferredQuery = useDeferredValue(query);
+  const results = useMemo(() => searchFiles(deferredQuery), [deferredQuery, searchReady]);
   function completeIntro() { if (introCompleted.current) return; introCompleted.current = true; setTour(false); writeLocal("golemon-intro-done", true); }
   // useCallback keeps the identity stable across hover-label re-renders so ResultList's memo holds.
   const remember = useCallback(function remember(value: string) {
@@ -81,7 +85,7 @@ export function ImmersiveBlog() {
   useEffect(() => {
     if (simple || !host.current) return;
     const element = host.current; let cancelled = false; setReady(false); setError(false);
-    sceneModule.then(({createImmersiveBlog}) => {
+    loadScene().then(({createImmersiveBlog}) => {
       if (cancelled) return;
       api.current = createImmersiveBlog(element, {
         quality, onReady: () => setReady(true), onSearchRequest: openSearch, onInteraction: completeIntro, onHover: setLabel,
@@ -117,16 +121,16 @@ export function ImmersiveBlog() {
     {tour && ready && !simple && <aside className="first-visit" aria-label="首次访问提示"><strong>欢迎来到 Golemon 的三维博客</strong><p>拖动旋转场景 · 滚轮缩放<br/>点击书本查看分类 · 点击文章前往 GitHub</p><button onClick={completeIntro}>知道了</button></aside>}
     {label && !simple && <div className="object-label" role="status">{label}</div>}
     {simple && <section className="static-directory"><h1>Golemon Blogs · 简洁博客</h1><p className="directory-intro">记录大模型、智能体与系统工程相关的学习与实践。</p>{error && <p role="status">三维渲染暂不可用，所有文章仍可在这里访问。</p>}<p>共 {files.length} 篇文章 · 点击后前往 GitHub · <a href="./directory.html">无脚本目录</a></p>{route.view === "search" ? <><h2>搜索：{route.q || "全部文章"}</h2><button onClick={() => navigate({view:"shelf"})}>返回全部分类</button><ul>{searchFiles(route.q ?? "").map(file => <li key={file.path}><a href={file.url} target="_blank" rel="noreferrer">{file.title}</a></li>)}</ul></> : blogTree.map(node => <StaticNode key={node.path} node={node}/>)}</section>}
-    <div className="search-editor" hidden={!editing}><div className="search-notebook">{editing && !simple && <SearchNotebook/>}<form role="dialog" aria-modal="true" aria-labelledby="search-heading" onSubmit={event => {event.preventDefault(); if (selected >= 0 && results[selected]) {remember(query); window.open(results[selected].url,"_blank","noopener,noreferrer");} else submit();}} onKeyDown={event => {
+    {editing && <div className="search-editor"><div className="search-notebook">{!simple && <SearchNotebook/>}<form role="dialog" aria-modal="true" aria-labelledby="search-heading" onSubmit={event => {event.preventDefault(); if (selected >= 0 && results[selected]) {remember(query); window.open(results[selected].url,"_blank","noopener,noreferrer");} else submit();}} onKeyDown={event => {
       event.stopPropagation(); if (event.nativeEvent.isComposing) return;
       if (event.key === "Escape") closeSearch();
       if (["ArrowDown","ArrowUp"].includes(event.key)) {event.preventDefault(); setSelected(i => Math.max(0, Math.min(results.length-1, i + (event.key === "ArrowDown" ? 1 : -1))));}
       if (event.key === "Tab") {const fields = Array.from(event.currentTarget.querySelectorAll<HTMLElement>("input,button,a")); const next = (fields.indexOf(document.activeElement as HTMLElement) + (event.shiftKey ? -1 : 1) + fields.length) % fields.length; event.preventDefault(); fields[next]?.focus();}
     }}><h2 id="search-heading">搜索笔记</h2><label htmlFor="blog-search">标题、路径、拼音或首字母</label><input ref={search} id="blog-search" type="search" value={query} onChange={e => setQuery(e.target.value)} autoComplete="off" aria-label="搜索博客文章" aria-controls="search-results" aria-activedescendant={selected >= 0 ? `search-result-${selected}` : undefined} onKeyDown={e => {if (e.key === "Enter" && e.nativeEvent.isComposing) e.preventDefault();}}/><p aria-live="polite">匹配 {results.length} 篇 · ↑↓ 选择，回车打开</p>
     {!query && history.length > 0 && <div className="search-history"><span>最近搜索</span>{history.map(term => <button type="button" key={term} onClick={() => setQuery(term)}>{term}</button>)}<button type="button" onClick={() => {setHistory([]); writeLocal("golemon-search-history", []);}}>清空</button></div>}
-    <ResultList results={results} query={query} selected={selected} select={setSelected} remember={remember}/>
+    <ResultList results={results} query={deferredQuery} selected={selected} select={setSelected} remember={remember}/>
     {!results.length && <div><p>没有找到文章，试试这些相近分类：</p>{suggestions(query).map(node => <button key={node.path} type="button" onClick={() => {navigate({view:"category",path:node.path}); closeSearch();}}>{node.path}</button>)}</div>}
-    <div className="search-actions"><button type="button" onClick={closeSearch}>取消</button><button type="button" onClick={submit}>在书页中查看</button></div></form></div></div>
+    <div className="search-actions"><button type="button" onClick={closeSearch}>取消</button><button type="button" onClick={submit}>在书页中查看</button></div></form></div></div>}
     {random && <aside className="random-card" role="dialog" aria-label="随机探索"><small>今天翻到这一篇</small><h2>{random.title}</h2><p>{random.path}</p><a href={random.url} target="_blank" rel="noreferrer" onClick={() => setRandom(null)}>前往 GitHub 阅读 ↗</a><button onClick={explore}>再抽一篇</button><button onClick={() => setRandom(null)}>收起</button></aside>}
     <a className="accessible-directory" href="./directory.html">完整文章目录（无需三维渲染）</a>
     <div className={`build-stamp ${awake ? "" : "is-idle"}`}><span>最后更新 {BUILD_TIME}（中国时间）</span></div>
