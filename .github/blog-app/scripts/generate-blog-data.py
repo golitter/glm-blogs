@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import html
 import subprocess
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -12,6 +13,21 @@ OUTPUT_PATH = APP_ROOT / "src" / "generated" / "blog-data.ts"
 REPO_URL = "https://github.com/golitter/glm-blogs"
 BRANCH = "master"
 TZ = timezone(timedelta(hours=8))
+
+def file_history() -> dict:
+    result = subprocess.run(["git", "-c", "core.quotepath=false", "log", "--name-status", "--no-renames", "--pretty=format:@%ct", "--", "*.md"], cwd=REPO_ROOT, check=True, text=True, encoding="utf-8", capture_output=True)
+    history = {}
+    timestamp = 0
+    for line in result.stdout.splitlines():
+        if line.startswith("@"):
+            timestamp = int(line[1:])
+        elif "\t" in line:
+            status, path = line.split("\t", 1)
+            if path not in history:
+                history[path] = {"updatedAt": timestamp * 1000, "change": "added" if status == "A" else "modified"}
+    return history
+
+HISTORY: dict = {}
 
 # ---- 前端可见性规则 ----
 # 路径均为相对仓库根目录，用 "/" 分隔。两套互补规则：
@@ -89,6 +105,7 @@ def add_file(tree: dict, rel_path: str) -> None:
             "title": title,
             "path": rel_path,
             "url": github_url("blob", rel_path),
+            **HISTORY.get(rel_path, {}),
         }
     )
 
@@ -171,6 +188,7 @@ def build_recent_files() -> list[dict]:
                 "path": rel_path,
                 "url": github_url("blob", rel_path),
                 "date": datetime.fromtimestamp(timestamp, TZ).strftime("%Y-%m-%d %H:%M"),
+                **HISTORY.get(rel_path, {}),
             }
         )
     return recent
@@ -182,6 +200,8 @@ def ts_const(name: str, value: object, satisfies: str | None = None) -> str:
 
 
 def main() -> None:
+    global HISTORY
+    HISTORY = file_history()
     blog_tree, markdown_count = build_tree()
     recent_files = build_recent_files()
     update_time = datetime.now(TZ).strftime("%Y-%m-%d %H:%M:%S")
@@ -193,6 +213,8 @@ def main() -> None:
                 "  title: string;",
                 "  path: string;",
                 "  url: string;",
+                "  updatedAt?: number;",
+                '  change?: "added" | "modified";',
                 "};",
                 "",
                 "export type BlogTreeNode = {",
@@ -217,6 +239,12 @@ def main() -> None:
         encoding="utf-8",
     )
     print(f"Generated {OUTPUT_PATH.relative_to(REPO_ROOT)} with {markdown_count} markdown files")
+    def static_node(node: dict) -> str:
+        links = ''.join(f'<li><a href="{html.escape(f["url"], quote=True)}">{html.escape(f["title"])}</a></li>' for f in node['files'])
+        return f'<section><h2>{html.escape(node["path"])}</h2><ul>{links}</ul>{"".join(static_node(c) for c in node["children"])}</section>'
+    public = APP_ROOT / 'public'
+    public.mkdir(exist_ok=True)
+    (public / 'directory.html').write_text('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Golemon Blogs · 文章目录</title><style>body{max-width:900px;margin:40px auto;padding:20px;font:16px/1.8 system-ui;background:#fff9ed;color:#34482f}a{color:#456537}section{margin:24px 0}h2{font-size:20px}li{padding:4px}</style><main><h1>Golemon Blogs · 文章目录</h1><a href="./">返回三维博客</a>' + ''.join(static_node(n) for n in blog_tree) + '</main></html>', encoding='utf-8')
 
 
 if __name__ == "__main__":

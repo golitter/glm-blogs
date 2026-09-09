@@ -10,16 +10,25 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { blogTree, markdownCount, recentFiles, type BlogFile, type BlogTreeNode } from "@/generated/blog-data";
 import { PROFILE_URL, CSDN_URL } from "@/lib/constants";
 import { shelfLayout } from "@/lib/shelf-layout";
+import { searchFiles, nodes, updateInfo, type Route, type Quality } from "@/lib/blog-experience";
 
 type Interactive = {
   root: THREE.Object3D;
   action: () => void;
   baseScale: THREE.Vector3;
+  basePosition: THREE.Vector3;
+  name: string;
+  glow?: THREE.MeshToonMaterial;
 };
 
 type SceneOptions = {
   onReady: () => void;
   onSearchRequest: () => void;
+  quality: Quality;
+  onRouteChange: (route: Route, replace?: boolean) => void;
+  onInteraction: () => void;
+  onHover: (name: string) => void;
+  onError: () => void;
 };
 type DirectoryEntry = BlogFile & { folder?: BlogTreeNode };
 
@@ -38,17 +47,26 @@ function flattenNode(node: BlogTreeNode): BlogFile[] {
   return [...node.files, ...node.children.flatMap(flattenNode)];
 }
 
-const allFiles = blogTree.flatMap(flattenNode);
-
 export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
+  const quality = options.quality;
+  const low = quality === "eco";
+  const pixelRatio = Math.min(devicePixelRatio, quality === "high" ? 1.7 : low ? 1 : 1.25);
+  let currentRoute: Route = {view:"home"};
+  let suppressRoute = false;
+  let lastActivity = performance.now();
+  function announce(route: Route) {
+    currentRoute = route;
+    if (route.view !== "category" && route.view !== "search") renderer.domElement.setAttribute("aria-label", `${route.view === "recent" ? "最近更新" : route.view === "shelf" ? "知识目录" : "全景"}，拖动可 360° 环绕，滚轮缩放。`);
+    if (!suppressRoute) options.onRouteChange(route);
+  }
   const cabinet = shelfLayout<BlogTreeNode>(blogTree);
   const sceneHeight = Math.max(17, cabinet.height + 4);
   const compact = matchMedia("(max-width: 700px)");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
-  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
-  renderer.setPixelRatio(Math.min(devicePixelRatio, compact.matches ? 1.2 : 1.7));
+  const renderer = new THREE.WebGLRenderer({ antialias: !low, powerPreference: low ? "low-power" : "high-performance" });
+  renderer.setPixelRatio(pixelRatio);
   renderer.setSize(host.clientWidth, host.clientHeight);
-  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.enabled = quality === "high";
   renderer.localClippingEnabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -85,7 +103,10 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   outline.visibleEdgeColor.set(0xffe4a0);
   outline.hiddenEdgeColor.set(0x71865a);
   composer.addPass(outline);
-  composer.addPass(new UnrealBloomPass(new THREE.Vector2(host.clientWidth, host.clientHeight), 0.06, 0.32, 1.15));
+  outline.enabled = !low;
+  const bloom = new UnrealBloomPass(new THREE.Vector2(host.clientWidth, host.clientHeight), 0.06, 0.32, 1.15);
+  bloom.enabled = quality === "high";
+  composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
   const gradient = new THREE.DataTexture(new Uint8Array([80, 150, 210, 255]), 4, 1, THREE.RedFormat);
@@ -107,10 +128,10 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     return item;
   }
   function rounded(parent: THREE.Object3D, size: [number, number, number], position: [number, number, number], color: number, radius = 0.12) {
-    return mesh(new RoundedBoxGeometry(...size, 4, radius), toon(color), parent, position);
+    return mesh(new RoundedBoxGeometry(...size, low ? 1 : 4, radius), toon(color), parent, position);
   }
   function sphere(parent: THREE.Object3D, position: [number, number, number], scale: [number, number, number], color: number) {
-    const item = mesh(new THREE.SphereGeometry(1, compact.matches ? 16 : 28, 18), toon(color), parent, position);
+    const item = mesh(new THREE.SphereGeometry(1, low ? 10 : compact.matches ? 16 : 28, low ? 8 : 18), toon(color), parent, position);
     item.scale.set(...scale);
     return item;
   }
@@ -155,13 +176,22 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthWrite: false, side: THREE.FrontSide, toneMapped: false, fog: false });
     const plane = new THREE.Mesh(new THREE.PlaneGeometry(width, height), material);
     plane.userData.textTexture = texture;
+    plane.userData.label = text;
     return plane;
   }
 
   const interactives: Interactive[] = [];
   const panelInteractives = new Set<Interactive>();
   function interactive(root: THREE.Object3D, action: () => void, panel = false) {
-    const record = { root, action, baseScale: root.scale.clone() };
+    const labels: string[] = [];
+    root.traverse(object => { if (object.userData.label) labels.push(object.userData.label); });
+    let glow: THREE.MeshToonMaterial | undefined;
+    if (!panel) root.traverse(object => {
+      if (!glow && object instanceof THREE.Mesh && object.material instanceof THREE.MeshToonMaterial) {
+        glow = object.material.clone(); glow.emissive.set(0xe8c27b); glow.emissiveIntensity = .035; object.material = glow;
+      }
+    });
+    const record = { root, action, baseScale: root.scale.clone(), basePosition: root.position.clone(), name: root.userData.name ?? labels[0] ?? "查看", glow };
     root.traverse((object) => { object.userData.hit = record; });
     interactives.push(record);
     if (panel) panelInteractives.add(record);
@@ -260,14 +290,21 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   // World title and fully 3D navigation plaques.
   const titleBoard = rounded(world, [10.8, 2.1, .35], [0, Math.max(11.7, cabinet.height + 1.8), -5.4], PALETTE.paper, .18);
   const title = textPlane("Golemon Blogs", 9.8, 1.05, { size: 56, weight: 700, color: "#566d43" });
-  title.position.set(0, .2, .19);
+  title.position.set(0, .4, .19);
   titleBoard.add(title);
   const backTitle = textPlane("Golemon Blogs", 9.8, 1.05, {weight: 700, color: "#566d43"});
-  backTitle.position.set(0, .2, -.19);
+  backTitle.position.set(0, .4, -.19);
   backTitle.rotation.y = Math.PI;
   titleBoard.add(backTitle);
-  const subtitle = textPlane(`${markdownCount} 篇笔记 · 拖动环绕 360° · 点击书本阅读`, 8.3, .48, { size: 33, weight: 400, color: "#8a7a5c" });
-  subtitle.position.set(0, -.55, .2);
+  const description = textPlane("记录大模型、智能体与系统工程相关的学习与实践。", 9.8, .48, { weight: 600, color: "#687a51" });
+  description.position.set(0, -.24, .2);
+  titleBoard.add(description);
+  const backDescription = description.clone();
+  backDescription.position.z = -.2;
+  backDescription.rotation.y = Math.PI;
+  titleBoard.add(backDescription);
+  const subtitle = textPlane(`${markdownCount} 篇笔记 · 拖动环绕 360° · 点击书本阅读`, 8.3, .32, { weight: 400, color: "#998d71" });
+  subtitle.position.set(0, -.72, .2);
   titleBoard.add(subtitle);
 
   let desiredPosition = camera.position.clone();
@@ -275,6 +312,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   let movingCamera = false;
   let currentView: "home" | "shelf" | "recent" | "panel" = compact.matches ? "shelf" : "home";
   function goTo(position: THREE.Vector3, target: THREE.Vector3) {
+    lastActivity = performance.now();
     desiredPosition = position;
     desiredTarget = target;
     movingCamera = true;
@@ -288,47 +326,11 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     camera.updateProjectionMatrix();
     goTo(target.clone().add(new THREE.Vector3(0, tilt * distance, distance)), target);
   }
-  const homeView = () => { currentView = "home"; fitView(new THREE.Vector3(0, 5 + (sceneHeight - 17) / 2, -1), 27, sceneHeight, .3); desiredPosition.x = (desiredPosition.z + 1) * .12; };
-  const shelfView = () => { currentView = "shelf"; fitView(new THREE.Vector3(-7.1, cabinet.height / 2 + .55, -2.2), 10, cabinet.height + 2, .07); };
-  const recentView = () => { currentView = "recent"; fitView(new THREE.Vector3(7.2, 4.3, -2.2), 9.4, 10, .04); };
-  const navItems = [
-    { text: "全景", x: -4.8, action: homeView },
-    { text: "知识目录", x: -1.65, action: shelfView },
-    { text: "最近更新", x: 1.65, action: recentView },
-    { text: "搜索", x: 4.8, action: () => { directoryStack.length = 0; showSearch(searchQuery); options.onSearchRequest(); } },
-  ];
-  for (const item of navItems) {
-    const group = new THREE.Group();
-    group.position.set(item.x, Math.max(8.55, cabinet.height + .2), -4.5);
-    world.add(group);
-    rounded(group, [2.7, .85, .32], [0, 0, 0], item.text === "知识目录" ? PALETTE.sage : PALETTE.paper, .2);
-    const label = textPlane(item.text, 2.35, .5, { size: 46, weight: 600 });
-    label.position.z = .18;
-    group.add(label);
-    const reverseLabel = textPlane(item.text, 2.35, .5, {weight: 600});
-    reverseLabel.position.z = -.18;
-    reverseLabel.rotation.y = Math.PI;
-    group.add(reverseLabel);
-    interactive(group, item.action);
-  }
-  // A camera-mounted set of real 3D controls remains tappable in portrait view.
-  const mobileNav = new THREE.Group();
-  mobileNav.visible = true;
-  mobileNav.position.set(0, -1.25, -5);
-  camera.add(mobileNav);
-  scene.add(camera);
-  navItems.forEach((item, index) => {
-    const group = new THREE.Group();
-    group.position.set(index % 2 ? .42 : -.42, Math.floor(index / 2) * -.43, 0);
-    mobileNav.add(group);
-    const body = new THREE.Mesh(new RoundedBoxGeometry(.74, .34, .12, 3, .07), new THREE.MeshBasicMaterial({ color: index === 1 ? PALETTE.sage : PALETTE.paper }));
-    group.add(body);
-    const label = textPlane(item.text, .64, .22, { size: 39, weight: 700, color: "#504a3e" });
-    label.position.z = .07;
-    group.add(label);
-    interactive(group, item.action);
-  });
-
+  const overviewTarget = new THREE.Vector3(0, 5 + (sceneHeight - 17) / 2, -1);
+  const overview = () => fitView(overviewTarget.clone(), 27, sceneHeight, .3);
+  const homeView = () => { currentView = "home"; announce({view:"home"}); overview(); };
+  const shelfView = () => { currentView = "shelf"; announce({view:"shelf"}); overview(); };
+  const recentView = () => { currentView = "recent"; announce({view:"recent"}); overview(); };
   // Left: category bookshelf with physical volumes.
   const shelf = new THREE.Group();
   shelf.position.set(-7.1, .35, -2.5);
@@ -356,8 +358,26 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.z = (index % 5 - 2) * .012;
+    group.userData.name = `${node.name} · ${node.count} 篇`;
+    group.userData.book = true;
+    group.userData.category = node.path;
     shelfContents.add(group);
-    rounded(group, [1.25, 2.3, .65], [0, 0, 0], bookColors[index % bookColors.length], .11);
+    const categoryFiles = flattenNode(node);
+    const updatedAt = Math.max(0, ...categoryFiles.map(file => file.updatedAt ?? 0));
+    const age = updatedAt ? Date.now() - updatedAt : Infinity;
+    const color = new THREE.Color(bookColors[index % bookColors.length]);
+    if (age < 7 * 86400000) color.lerp(new THREE.Color(0xfff5c4), .22);
+    else if (age > 90 * 86400000) color.lerp(new THREE.Color(0xc6c5b5), .27);
+    const thickness = .48 + Math.min(.55, Math.log2(node.count + 1) * .09);
+    // Front cover stays aligned; the paper block grows backwards with content.
+    rounded(group, [1.25, 2.3, thickness], [0, 0, (.65 - thickness) / 2], color.getHex(), .11);
+    for (let i = 0; i < Math.min(node.children.length, 6); i++) rounded(group, [.055, .12, .035], [-.4 + i * .16, -.95, .36], PALETTE.gold, .01);
+    const signal = mesh(new THREE.SphereGeometry(.055, 8, 6), new THREE.MeshBasicMaterial({color: age < 7 * 86400000 ? 0xe7bd62 : 0xfff7d5, transparent:true, opacity:.65}), group, [.43, .96, .39]);
+    signal.userData.beacon = true;
+    if (categoryFiles.some(file => updateInfo(file).isNew)) {
+      rounded(group, [.19, .44, .05], [.35, 1.05, .39], PALETTE.gold, .02);
+      const flag = textPlane("NEW", .28, .13, {color:"#5e673b"}); flag.position.set(.35, 1.13, .43); group.add(flag);
+    }
     rounded(group, [.055, 2.06, .42], [.625, 0, 0], PALETTE.paper, .01);
     for (const y of [-.95, -.9, .9, .95]) rounded(group, [1.05, .018, .66], [0, y, 0], PALETTE.cream, .004);
     rounded(group, [1.08, .16, .69], [0, .77, .01], PALETTE.gold, .03);
@@ -397,8 +417,9 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     const label = textPlane(`${String(index + 1).padStart(2, "0")}  ${file.title}`, 4.9, .48, { size: 41, weight: 600, align: "left" });
     label.position.set(-.15, .13, .11);
     group.add(label);
-    const date = textPlane(file.date, 3.6, .28, { size: 31, weight: 400, align: "left", color: "#8a806d" });
-    date.position.set(-.78, -.25, .115);
+    const info = updateInfo(file);
+    const date = textPlane(`${info.bucket} · ${info.relative} · ${file.change === "added" ? "新增" : "修改"}${info.isNew ? " · NEW" : ""}`, 5.7, .28, { size: 31, weight: 400, align: "left", color: "#8a806d" });
+    date.position.set(.15, -.25, .115);
     group.add(date);
     interactive(group, () => window.open(file.url, "_blank", "noopener,noreferrer"));
   });
@@ -475,6 +496,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       ...node.files,
     ];
     showPanel(node.name, entries, 0);
+    announce({view:"category", path:node.path});
   }
   let scrollLimit = 0;
   let listTop = 0;
@@ -482,20 +504,21 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   let scrollRows: { group: THREE.Group; y: number; halfHeight: number }[] = [];
   let scrollThumb: THREE.Mesh | null = null;
   function scrollPanel(value: number) {
+    lastActivity = performance.now();
     panelScroll = Math.max(0, Math.min(value, scrollLimit));
-    if (hovered) hovered.root.scale.copy(hovered.baseScale);
-    hovered = null;
+    resetHover();
     outline.selectedObjects = [];
     for (const row of scrollRows) {
       row.group.position.y = row.y + panelScroll;
+      const record = row.group.userData.hit as Interactive | undefined;
+      if (record) record.basePosition.copy(row.group.position);
       row.group.visible = row.group.position.y + row.halfHeight >= listBottom && row.group.position.y - row.halfHeight <= listTop;
     }
     if (scrollThumb) scrollThumb.position.y = listTop - .35 - (scrollLimit ? panelScroll / scrollLimit : 0) * (listTop - listBottom - .7);
     renderer.domElement.setAttribute("aria-label", `${panelTitle}，${panelFiles.length} 项，可上下滚动，滚动进度 ${scrollLimit ? Math.round(panelScroll / scrollLimit * 100) : 100}%。Escape 返回。`);
   }
   function clearPanel() {
-    if (hovered) hovered.root.scale.copy(hovered.baseScale);
-    hovered = null;
+    resetHover();
     outline.selectedObjects = [];
     for (const record of panelInteractives) {
       const index = interactives.indexOf(record);
@@ -526,7 +549,6 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     }
     directoryStack.length = 0;
     panel.visible = false;
-    mobileNav.visible = true;
     controls.enableRotate = true;
     controls.enableZoom = true;
     clearPanel();
@@ -552,7 +574,6 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     panelFiles = files;
     panelScroll = scrollOffset;
     panel.visible = true;
-    mobileNav.visible = false;
     const portrait = compact.matches;
     panel.position.y = portrait ? 6 : 5;
     rounded(panel, [portrait ? 7.25 : 14.8, portrait ? 10.3 : 8.8, .42], [0, 0, 0], 0xc9b78e, .26);
@@ -623,13 +644,27 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     searchQuery = value;
     directoryStack.length = 0;
     const query = value.trim().toLowerCase();
-    const results = query ? allFiles.filter((file) => `${file.title} ${file.path}`.toLowerCase().includes(query)) : allFiles;
+    const results = searchFiles(value);
     showPanel(query ? `搜索：${value.trim()}` : "搜索全部笔记", results, 0);
+    announce({view:"search", q:value});
   }
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   let hovered: Interactive | null = null;
+  function resetHover() {
+    if (hovered) { hovered.root.scale.copy(hovered.baseScale); hovered.root.position.copy(hovered.basePosition); }
+    hovered = null; outline.selectedObjects = []; options.onHover("");
+  }
+  function highlight(record: Interactive | null) {
+    if (record === hovered) return;
+    resetHover(); hovered = record;
+    if (!record) return;
+    record.root.scale.copy(record.baseScale).multiplyScalar(1.035);
+    // Pull books out of the cabinet; lift other labels without changing hit areas.
+    record.root.position.z = record.basePosition.z + (record.root.userData.book ? .25 : .055);
+    outline.selectedObjects = [record.root]; options.onHover(record.name);
+  }
   let downAt = new THREE.Vector2();
   let dragged = false;
   let pressed: Interactive | null = null;
@@ -639,7 +674,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     const rect = renderer.domElement.getBoundingClientRect();
     pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
     raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObjects(panel.visible ? [panel] : [mobileNav, world], true);
+    const hits = raycaster.intersectObjects(panel.visible ? [panel] : [world], true);
     for (const hit of hits) {
       let object: THREE.Object3D | null = hit.object;
       let visible = true;
@@ -660,6 +695,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     return null;
   }
   function onPointerMove(event: PointerEvent) {
+    lastActivity = performance.now();
     if (downAt.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > 7) dragged = true;
     if (panel.visible && activePointer === event.pointerId && dragged) {
       const unitsPerPixel = 2 * (camera.position.z - panel.position.z) * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / host.clientHeight;
@@ -668,31 +704,30 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       return;
     }
     const next = hitTest(event);
-    if (next !== hovered) {
-      if (hovered) hovered.root.scale.copy(hovered.baseScale);
-      hovered = next;
-      outline.selectedObjects = hovered ? [hovered.root] : [];
-      renderer.domElement.style.cursor = hovered ? "pointer" : "grab";
-      if (hovered) hovered.root.scale.copy(hovered.baseScale).multiplyScalar(1.045);
-    }
+    highlight(next);
+    renderer.domElement.style.cursor = hovered ? "pointer" : "grab";
   }
   function onPointerDown(event: PointerEvent) {
     downAt.set(event.clientX, event.clientY);
     dragged = false;
     pressed = hitTest(event);
+    highlight(pressed);
+    lastActivity = performance.now();
     activePointer = event.pointerId;
     lastPointerY = event.clientY;
     if (panel.visible) renderer.domElement.setPointerCapture(event.pointerId);
   }
   function onPointerUp(event: PointerEvent) {
     const hit = hitTest(event);
-    if (!dragged && hit && hit === pressed) hit.action();
+    if (!dragged && hit && hit === pressed) { options.onInteraction(); options.onHover(hit.name); hit.action(); }
+    if (dragged) options.onInteraction();
     pressed = null;
     activePointer = null;
     if (renderer.domElement.hasPointerCapture(event.pointerId)) renderer.domElement.releasePointerCapture(event.pointerId);
   }
   function onPointerCancel() { activePointer = null; pressed = null; dragged = true; }
   function onWheel(event: WheelEvent) {
+    lastActivity = performance.now(); options.onInteraction();
     if (!panel.visible) return;
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -716,21 +751,33 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   renderer.domElement.addEventListener("pointercancel", onPointerCancel);
   renderer.domElement.addEventListener("wheel", onWheel, {passive: false, capture: true});
   window.addEventListener("keydown", onKeyDown);
-  controls.addEventListener("start", () => { controls.autoRotate = false; });
+  let historyTimer: ReturnType<typeof setTimeout>;
+  controls.addEventListener("start", () => { controls.autoRotate = false; lastActivity = performance.now(); });
+  controls.addEventListener("end", () => {
+    clearTimeout(historyTimer);
+    historyTimer = setTimeout(() => {
+      if (!disposed && !panel.visible && !movingCamera) options.onRouteChange({...currentRoute, camera:[...camera.position.toArray(), ...controls.target.toArray()]}, true);
+    }, 400);
+  });
 
   let disposed = false;
   let frame = 0;
+  let renderTimeout: ReturnType<typeof setTimeout>;
+  const beacons: THREE.Mesh[] = [];
+  world.traverse(object => { if (object instanceof THREE.Mesh && object.userData.beacon) beacons.push(object); });
   const timer = new THREE.Timer();
   timer.connect(document);
   function animate(timestamp?: number) {
-    if (disposed) return;
-    frame = requestAnimationFrame(animate);
+    if (disposed || document.hidden) return;
     timer.update(timestamp);
     const t = timer.getElapsed();
-    if (!reduced.matches) {
+    const active = movingCamera || performance.now() - lastActivity < 1800;
+    if (!reduced.matches && !low) {
       bird.position.y = 2.55 + Math.sin(t * 1.2) * .08;
       board.rotation.z = Math.sin(t * .35) * .006;
       titleBoard.rotation.z = Math.sin(t * .28) * .006;
+      for (const beacon of beacons) (beacon.material as THREE.MeshBasicMaterial).opacity = .48 + Math.sin(t * 1.7) * .2;
+      for (const item of interactives) if (item.glow) item.glow.emissiveIntensity = .035 + Math.sin(t * 1.7) * .02;
     }
     if (movingCamera) {
       camera.position.lerp(desiredPosition, .075);
@@ -742,28 +789,31 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       }
     }
     if (!movingCamera) controls.update();
-    composer.render();
+    if (low) renderer.render(scene, camera); else composer.render();
+    // No animation work while hidden; idle scenes redraw at 6–12 fps.
+    const fps = active ? (quality === "high" ? 60 : 30) : low ? 6 : 12;
+    renderTimeout = setTimeout(() => { frame = requestAnimationFrame(animate); }, Math.max(0, 1000 / fps - 16));
   }
+  function visibilityChanged() { clearTimeout(renderTimeout); cancelAnimationFrame(frame); if (!document.hidden) { lastActivity = performance.now(); frame = requestAnimationFrame(animate); } }
+  function contextLost(event: Event) { event.preventDefault(); options.onError(); }
+  document.addEventListener("visibilitychange", visibilityChanged);
+  renderer.domElement.addEventListener("webglcontextlost", contextLost);
   function resize() {
     const width = host.clientWidth;
     const height = host.clientHeight;
     camera.aspect = width / height;
     camera.fov = 38;
-    mobileNav.visible = !panel.visible;
     camera.updateProjectionMatrix();
-    const viewHeight = 10 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    const navScale = compact.matches ? Math.min(.8, viewHeight * camera.aspect * .86 / 1.65) : .58;
-    mobileNav.children.forEach((item, index) => item.position.set(compact.matches ? (index % 2 ? .42 : -.42) : (index - 1.5) * .95, compact.matches ? Math.floor(index / 2) * -.43 : 0, 0));
-    mobileNav.scale.setScalar(navScale);
-    mobileNav.position.set(0, -viewHeight / 2 + (compact.matches ? .68 : .4) * navScale, -5);
-    renderer.setPixelRatio(Math.min(devicePixelRatio, compact.matches ? 1.2 : 1.7));
+    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height);
     composer.setSize(width, height);
     outline.resolution.set(width, height);
+    suppressRoute = true;
     if (currentView === "panel") showPanel(panelTitle, panelFiles, panelScroll);
     else if (currentView === "shelf") shelfView();
     else if (currentView === "recent") recentView();
     else homeView();
+    suppressRoute = false;
   }
   const resizer = new ResizeObserver(resize);
   resizer.observe(host);
@@ -772,9 +822,52 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   const readyFrame = requestAnimationFrame(() => { if (!disposed) options.onReady(); });
 
   return {
+    previewArticle(file: BlogFile) {
+      resetHover();
+      if (panel.visible) { panel.visible = false; clearPanel(); }
+      controls.enableRotate = true; controls.enableZoom = true;
+      currentView = "shelf";
+      const book = interactives.find(item => item.root.userData.book && (file.path.startsWith(item.root.userData.category + "/") || item.root.userData.category === "root" && !file.path.includes("/")));
+      if (book) {
+        world.updateMatrixWorld(true);
+        const center = book.root.getWorldPosition(new THREE.Vector3());
+        fitView(center, 6, 6, .08);
+        highlight(book);
+      }
+    },
+    navigate(route: Route) {
+      suppressRoute = true;
+      resetHover();
+      if (panel.visible) { panel.visible = false; clearPanel(); }
+      controls.enableRotate = true; controls.enableZoom = true;
+      directoryStack.length = 0;
+      if (route.view === "category") {
+        const node = nodes.find(n => n.path === route.path);
+        if (node) {
+          directoryStack.push(...nodes.filter(n => node.path.startsWith(n.path + "/")).sort((a,b) => a.path.length - b.path.length));
+          openDirectory(node);
+        } else shelfView();
+      } else if (route.view === "search") showSearch(route.q ?? "");
+      else if (route.view === "recent") recentView();
+      else if (route.view === "shelf") shelfView();
+      else homeView();
+      if (route.camera && !panel.visible) {
+        const position = new THREE.Vector3(...route.camera.slice(0,3) as [number,number,number]);
+        const target = new THREE.Vector3(...route.camera.slice(3) as [number,number,number]);
+                // Migrate old off-centre shelf/recent camera links to the full-room framing.
+        if (Math.abs(target.x) > 1 && ["home", "shelf", "recent"].includes(route.view)) {
+          const offset = position.clone().sub(target);
+          offset.setLength(Math.max(offset.length(), desiredPosition.distanceTo(desiredTarget)));
+          goTo(overviewTarget.clone().add(offset), overviewTarget.clone());
+        } else if (position.distanceTo(target) >= 5) goTo(position, target);
+      }
+      currentRoute = route;
+      suppressRoute = false;
+    },
     setQuery(value: string) { showSearch(value); },
     dispose() {
       disposed = true;
+      clearTimeout(renderTimeout); clearTimeout(historyTimer);
       cancelAnimationFrame(frame);
       cancelAnimationFrame(readyFrame);
       resizer.disconnect();
@@ -784,6 +877,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       renderer.domElement.removeEventListener("pointercancel", onPointerCancel);
       renderer.domElement.removeEventListener("wheel", onWheel, true);
       window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("visibilitychange", visibilityChanged);
+      renderer.domElement.removeEventListener("webglcontextlost", contextLost);
       controls.dispose();
       timer.dispose();
       scene.traverse((object) => {
