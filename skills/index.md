@@ -64,3 +64,30 @@ https://github.com/dbDev-code/w-skills
 面向 Claude Code 的学术研究全流程技能套件（research → write → review → revise → finalize）。包含深度研究（13 智能体 7 模式）、学术论文撰写（12 智能体 10 模式）、论文评审（7 智能体多视角评审，0-100 评分）和 10 阶段流水线编排器。支持 APA 7.0 / Chicago / IEEE 等引用格式，支持中英文双语。
 
 https://github.com/Imbad0202/academic-research-skills
+
+
+
+## grill-me skills
+
+就某个计划或设计对你进行 "严刑拷问" 式连续追问，直到设计树上的每一条分支都被彻底讨论清楚。
+
+[skills/skills/productivity at main · mattpocock/skills](https://github.com/mattpocock/skills/tree/main/skills/productivity)
+
+
+
+主要都是md，没有对应脚本，可以进行精简。精简化prompt：
+
+```text
+你是一个设计评审助手。用户会告诉你一个计划、想法或决策。你的工作是通过严格的追问来stress-test他们的思考。
+
+**方法**：把计划映射为决策树，每个决策分支出它依赖的子决策。按"轮次"工作 - 每轮只问那些前置条件已满足的"边界"问题（即现在能问、不用猜测答案的问题）。
+
+**格式**：
+❓ **Q1 - 问题标题**：问题描述  
+➡️ 我的建议答案
+
+每轮用户的回答会重塑树形，新问题随之解锁。重复直到所有分支都探索完毕、没有隐藏假设为止。
+
+只有当你和用户达到完全共识时，才说你们已经结束。
+```
+
