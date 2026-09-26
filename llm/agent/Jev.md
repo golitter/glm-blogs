@@ -8,6 +8,12 @@ https://github.com/NanmiCoder/jev-arena
 
 [tamaratran/jev-pruner: Claude Code plugin: trim long Bash output with TypeSafe Jev before the model sees it](https://github.com/tamaratran/jev-pruner)
 
+https://github.com/li-xiu-qi/XiaokeAILabs/tree/main/experiments/test_jev_open_source/text_jev_train
+
+[mp.weixin.qq.com/s/F7i83rn8oDzQ-sg13MKwWA](https://mp.weixin.qq.com/s/F7i83rn8oDzQ-sg13MKwWA)
+
+
+
 Jev是System One Model，读取自然语言，不生成文字，只返回判断。
 
 > Jev不是LLM架构：单次并行采样，而非逐个token自回归
@@ -16,6 +22,10 @@ Jev是System One Model，读取自然语言，不生成文字，只返回判断�
 - Jev不会编造一个不在规定范围内的输出，仍可能选择出错误答案
 
 Jev解决的是**输出失控和格式不可靠**。
+
+> 跟LLM的**约束解码**有什么区别？
+>
+> Jev 是不生成文本、直接输出选项级校准概率的非自回归判别式决策模型，而 LLM 约束解码仍是自回归生成合法文本、只是用推理期限制把输出关进给定格式里。
 
 **在Agent中，并不是所有的智能部分都要用LLM来做。LLM只该负责复杂思考，而高频、模式明显的判断---路由、过滤、评分、守门、复核可以交给更轻量的判断模型Jev。**
 
@@ -41,6 +51,38 @@ Jev解决的是**输出失控和格式不可靠**。
 ```shell
 Claude 请求 Bash 命令 → 命令执行 → Jev 剪掉冗余 stdout → Claude 只看到精简结果
 ```
+
+
+
+### jev-like 模型
+
+1. Laya，骨干网络是ModernBERT-large，双向编码器，可以一次看到完整的上下文。最多支持255个item，但是官方建议不要超过20个。
+2. Kev，基于LLM，添加Lora适配器和指针头，将隐藏状态映射为选项概率。
+
+#### 复现agentjev
+
+> agentjev 使用 Qwen3-0.6B 作为底座，但移除了其语言模型输出，模型不再具备逐字生成文本的能力，只保留对输入的理解。在骨干网络之上，接了一个小型的、与排列等变的评分头。
+
+按上游路线在本地 A100 上全参微调 Qwen3-0.6B，训练判别式决策模型 AgentJev——不生成文本，对 boolean/choice/score 三类题直接输出候选概率分布。四步走完：下载数据（sha256 逐字节校验）→ 切分（960/120/120/400 案例，与上游一致）→ 训练 600 步 → 起 HTTP 服务验证。
+
+**核心数字对齐**：
+
+| 指标               | 上游 GB10 | 本机 A100                         |
+| ------------------ | --------- | --------------------------------- |
+| test 2000 题准确率 | 78.05%    | **77.60%**（差 0.45pp，复现成功） |
+| 峰值显存           | ~34 GB    | 33.72 GB                          |
+| 训练时长           | ~49 min   | 13.7 min                          |
+| 单题延迟           | 几十 ms   | 中位 26.8 ms                      |
+
+**训练有效**：初始模型准确率 27%（≈随机）→ 训练后 dev 81.3%，单调上升无过拟合；boolean 最强 85.7%，choice/score 约 74%。
+
+**过程中修了两个上游 bug**：① 数据集下载 URL 路径写错（404，修正后哈希与锁定值一致）；② 推理引擎缺 `prefix.py` 文件（按训练代码语义补写）。
+
+**服务验证**：中文工单示例正确判定「账务」，三题型全通，判别式输出（生成 token 恒为 0）。
+
+**边界实测**：候选数协议上限 255（同 Jev），但训练只覆盖 2~5 个，>20 实测判别力塌缩（p_max→1/N）且延迟线性涨（~21ms/候选，255 个要 5.4s）。
+
+**结论**：上游训练路线完整可复现；可低成本私有化获得 27ms 级决策模型。替代官方 Jev 前需用业务数据回放验证，大 N 选项场景需两级漏斗或重训。
 
 
 
