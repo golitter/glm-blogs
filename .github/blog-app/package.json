@@ -7,7 +7,8 @@
     "dev": "vite --host 127.0.0.1",
     "prebuild": "node scripts/generate-data.mjs",
     "build": "tsc --noEmit && vite build",
-    "test": "node --test scripts/experience.test.mjs scripts/shelf-layout.test.mjs",
+    "test": "node --test scripts/experience.test.mjs scripts/shelf-layout.test.mjs scripts/contributions.test.mjs scripts/contributions-schedule.test.mjs scripts/contributions-sync.test.mjs",
+    "sync:contributions": "node scripts/sync-contributions.mjs",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {

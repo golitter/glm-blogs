@@ -244,6 +244,8 @@ def main() -> None:
         return f'<section><h2>{html.escape(node["path"])}</h2><ul>{links}</ul>{"".join(static_node(c) for c in node["children"])}</section>'
     public = APP_ROOT / 'public'
     public.mkdir(exist_ok=True)
+    # Persist the last published contribution snapshot with the site, without Git commits.
+    (public / 'contributions.json').write_bytes((APP_ROOT / 'src' / 'generated' / 'contributions.json').read_bytes())
     (public / 'directory.html').write_text('<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Golemon Blogs · 文章目录</title><style>body{max-width:900px;margin:40px auto;padding:20px;font:16px/1.8 system-ui;background:#fff9ed;color:#34482f}a{color:#456537}section{margin:24px 0}h2{font-size:20px}li{padding:4px}</style><main><h1>Golemon Blogs · 文章目录</h1><a href="./">返回三维博客</a>' + ''.join(static_node(n) for n in blog_tree) + '</main></html>', encoding='utf-8')
 
 

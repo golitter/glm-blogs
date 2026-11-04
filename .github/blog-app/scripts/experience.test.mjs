@@ -8,7 +8,7 @@ const compiled = ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKi
   .replace('"../generated/blog-data"', JSON.stringify(new URL('../src/generated/blog-data.ts', import.meta.url).href));
 const lib = await import('data:text/javascript;base64,' + Buffer.from(compiled).toString('base64'));
 test('routes round trip Chinese, nested paths, reserved query characters and camera', () => {
-  for (const route of [{view:'category',path:'llm/agent'}, {view:'category',path:'学习/含 空格'}, {view:'search',q:'codex & C++/#'}, {view:'recent'}, {view:'home',camera:[1,2,3,4,5,6]}]) {
+  for (const route of [{view:'category',path:'llm/agent'}, {view:'category',path:'学习/含 空格'}, {view:'search',q:'codex & C++/#'}, {view:'recent'}, {view:'contributions'}, {view:'home',camera:[1,2,3,4,5,6]}]) {
     assert.deepEqual(lib.parseRoute(lib.routeHash(route)), route);
   }
   assert.deepEqual(lib.parseRoute('#/category/%broken'), {view:'home'});

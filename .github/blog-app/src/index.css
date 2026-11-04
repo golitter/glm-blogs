@@ -1,6 +1,15 @@
 @import "tailwindcss";
 
-:root { font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; color: #454139; background: #dfead4; }
+:root {
+  font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  color: #454139;
+  background: #dfead4;
+  --blog-nav-background: #fff9e8dd;
+  --blog-nav-border: #fff9deaa;
+  --blog-nav-ink: #425634;
+  --blog-nav-hover: #dce7c5;
+  --blog-nav-shadow: 0 8px 28px #334d3426;
+}
 * { box-sizing: border-box; }
 html, body, #root { width: 100%; height: 100%; margin: 0; overflow: hidden; }
 body { min-width: 320px; }
@@ -24,11 +33,11 @@ body { min-width: 320px; }
 .sr-navigation { position: fixed; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @keyframes float { 50% { transform: translateY(-9px) rotate(5deg); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
-.floating-nav { position: fixed; z-index: 6; top: 16px; left: 50%; transform: translateX(-50%); display:flex; flex-wrap:wrap; justify-content:center; gap:4px; width:max-content; max-width:calc(100% - 24px); padding:7px; border:1px solid #fff9deaa; border-radius:16px; background:#fff9e8dd; box-shadow:0 5px 24px #334d3420; backdrop-filter:blur(12px); transition:opacity .5s; }
+.floating-nav { position: fixed; z-index: 6; top: 16px; left: 50%; transform: translateX(-50%); display:flex; flex-wrap:wrap; justify-content:center; gap:4px; width:max-content; max-width:calc(100% - 24px); padding:7px; border:1px solid var(--blog-nav-border); border-radius:16px; background:var(--blog-nav-background); box-shadow:var(--blog-nav-shadow); backdrop-filter:blur(12px); transition:opacity .5s; }
 .floating-nav.is-idle { opacity:.15; }
 .floating-nav:hover,.floating-nav:focus-within { opacity:1; }
-.floating-nav button { border:0; background:transparent; padding:8px 10px; border-radius:9px; color:#425634; cursor:pointer; font:inherit; font-size:13px; }
-.floating-nav button:hover,.floating-nav button[aria-current] { background:#dce7c5; }
+.floating-nav button { border:0; background:transparent; padding:8px 10px; border-radius:9px; color:var(--blog-nav-ink); cursor:pointer; font:inherit; font-size:13px; }
+.floating-nav button:hover,.floating-nav button[aria-current] { background:var(--blog-nav-hover); }
 .floating-nav kbd { font-size:10px; opacity:.6; }
 .quality-menu,.first-visit,.random-card { position:fixed; z-index:7; padding:20px; border:1px solid #d3c695; border-radius:16px; background:#fff9e9f2; box-shadow:0 12px 40px #334d3430; color:#415331; max-width:calc(100% - 32px); }
 .quality-menu { top:110px; right:20px; width:300px; }
@@ -85,10 +94,14 @@ mark { background:#f4dc87; color:inherit; border-radius:3px; }
 @media(max-width:700px) { .search-editor {padding:24px;} .search-notebook form {padding:43px 16px 25px;max-height:85dvh;} .search-notebook h2{font-size:23px;} .search-notebook .search-actions button {padding:10px 14px;font-size:13px;} .object-label {bottom:30px;} }
 .static-directory .directory-intro { margin:12px 0 24px; color:#687a51; font-weight:600; line-height:1.8; letter-spacing:.03em; }
 /* One prominent navigation bar; the room has no duplicate navigation plaques. */
-.floating-nav { top:20px; padding:10px 14px; gap:6px; border-radius:20px; box-shadow:0 8px 28px #334d3426; }
+.floating-nav { top:20px; padding:10px 14px; gap:6px; border-radius:20px; box-shadow:var(--blog-nav-shadow); }
 .floating-nav button { min-height:46px; padding:11px 17px; font-size:16px; font-weight:600; }
 .floating-nav kbd { font-size:11px; }
 .floating-nav.is-idle { opacity:.65; }
 .floating-nav:hover,.floating-nav:focus-within { opacity:1; }
 @media(min-width:1500px) { .floating-nav { top:22px; padding:12px 20px; gap:10px; } .floating-nav button { font-size:18px; padding:13px 21px; } }
 @media(max-width:700px) { .floating-nav { top:8px; padding:6px; gap:0; border-radius:16px; } .floating-nav button { min-height:38px; padding:7px 9px; font-size:12px; } }
+.floating-nav a { display:inline-flex; align-items:center; min-height:46px; padding:11px 17px; border-radius:9px; color:var(--blog-nav-ink); font:inherit; font-size:16px; font-weight:600; text-decoration:none; }
+.floating-nav a:hover,.floating-nav a:focus-visible { background:var(--blog-nav-hover); }
+@media(min-width:1500px) { .floating-nav a { font-size:18px; padding:13px 21px; } }
+@media(max-width:700px) { .floating-nav a { min-height:38px; padding:7px 9px; font-size:12px; } }

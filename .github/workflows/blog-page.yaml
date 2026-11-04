@@ -13,10 +13,11 @@ on:
       - '**.md'
       - '.github/workflows/blog-page.yaml'
       - '.github/blog-app/**'
-#   workflow_dispatch:
-#   schedule:
-#     # 每天北京时间上午9点（UTC时间1点）自动更新一次
-#     - cron: '0 1 * * *'
+  workflow_dispatch:
+  schedule:
+    # 每天北京时间 09:17 检查；距上次成功发布满五个自然日才同步和发布。
+    # 五天间隔由脚本按北京时间计算，跨月不会重置。
+    - cron: '17 1 * * *'
 
 permissions:
   contents: read
@@ -24,19 +25,26 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  # PR checks must not replace a pending production deployment in the Pages queue.
+  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.event.pull_request.number) || 'pages' }}
+  # A daily no-op check must not cancel an already queued blog publication.
+  queue: max
   cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.contributions.outputs.should_build }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: full
+          fetch-depth: 0
         
       - name: Setup Pages
+        if: github.event_name != 'pull_request'
+        id: pages
         uses: actions/configure-pages@v4
 
       - name: Setup pnpm
@@ -51,17 +59,34 @@ jobs:
           cache: pnpm
           cache-dependency-path: .github/blog-app/pnpm-lock.yaml
 
+      - name: Check five-day contribution refresh
+        id: contributions
+        working-directory: .github/blog-app
+        env:
+          CONTRIBUTIONS_SNAPSHOT_URL: ${{ steps.pages.outputs.base_url }}/contributions.json
+        run: node scripts/prepare-contributions.mjs
+
+      - name: Sync merged PRs and project Stars
+        if: steps.contributions.outputs.should_sync == 'true'
+        working-directory: .github/blog-app
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/sync-contributions.mjs
+
       - name: Install dependencies
+        if: steps.contributions.outputs.should_build == 'true'
         working-directory: .github/blog-app
         run: pnpm install --frozen-lockfile
 
       - name: Test blog page
+        if: steps.contributions.outputs.should_build == 'true'
         working-directory: .github/blog-app
         run: |
           python3 scripts/generate-blog-data.py
           pnpm test
 
       - name: Build blog page
+        if: steps.contributions.outputs.should_build == 'true'
         working-directory: .github/blog-app
         run: |
           python3 scripts/generate-blog-data.py
@@ -71,11 +96,13 @@ jobs:
           ./node_modules/.bin/vite build
           
       - name: Upload artifact
+        if: steps.contributions.outputs.should_build == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./.github/blog-app/dist
 
   deploy:
+    if: github.event_name != 'pull_request' && needs.build.outputs.should_deploy == 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

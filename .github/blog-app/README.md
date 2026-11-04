@@ -66,6 +66,28 @@ vite.config.ts                   base: "./"（相对路径，兼容 GitHub Pages
 - [页面设计与组件 / 内容可见性](../../others/golemon-blogs页面.md)
 - [AGENTS.md](AGENTS.md) — 给 AI agent 的操作手册
 
+## 开源贡献
+
+顶部「开源贡献」入口和 `#/contributions` 展示公开且已合并的 PR。页面按项目分组，项目按 GitHub Stars 降序排列，每个项目内按合并时间倒序排列。顶部总数来自实际展示的已合并 PR；项目及 PR 均链接至 GitHub，支持展开、收起和移动端阅读。
+
+数据快照是 `src/generated/contributions.json`，由脚本生成，不要手动修改。在本目录执行：
+
+```bash
+pnpm sync:contributions
+```
+
+脚本从 `src/lib/constants.ts` 中的 GitHub 主页读取账号，分页查找公开的已合并 PR，再逐条核验合并状态并获取各项目的 Stars。可使用本机已有的 GitHub CLI 登录，或通过环境变量 `GH_TOKEN` / `GITHUB_TOKEN` 提供凭据；凭据不会写入快照或发送至浏览器。全部校验成功后才替换快照，同步失败保留原有数据。
+
+采集和恢复已发布数据共用严格校验：账号、合并标记、时间、PR 编号、GitHub 链接及项目关联必须匹配，重复记录和未来的同步日期会被拒绝。分页期间结果总数变化也会中止本次更新，保留原快照供下次重试。当前单次查询最多支持 1,000 条 PR，超过时明确报错，不会静默截断；达到这个规模时需要按合并日期拆分查询。
+
+本地开发及普通构建直接读取已保存的快照，不需要访问 GitHub。页面默认展开所有项目，以浅色标题条区分项目，不显示日期。
+
+GitHub Actions 已配置每五个北京时间自然日更新一次 PR 和 Stars：每天北京时间 09:17 检查上次成功发布的数据，未满五天时跳过同步、构建和发布。跨月及跨年仍保持五天间隔，失败后下一天自动重试。也可以在 Actions 页面手动运行此工作流，立即强制同步。
+
+构建会生成公开的数据快照 `public/contributions.json` 并随页面发布。后续定时检查及普通博客发布会读取这份已发布快照，避免恢复为仓库中较旧的数据。自动更新不创建 Git 提交；PR 检查只构建测试，不同步或发布。
+
+定时任务需要这些改动进入默认分支后才会生效。GitHub 的定时触发可能延后；公开仓库连续 60 天无活动时，定时任务会被平台自动停用，需要重新启用，参见 [GitHub 定时任务说明](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)。
+
 ## 全屏 3D 云端博客
 
 主场景采用全屏 WebGL Canvas，搜索时按需创建独立的三维手账。南小鸟灵感的奶油白、浅绿、灰棕和香槟金贯穿实体书架、更新留言板、搜索设备、个人相框与三维博客。

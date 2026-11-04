@@ -77,7 +77,7 @@ export function suggestions(query: string) {
   return [...nodes].sort((a,b) => score(b) - score(a) || b.count - a.count).slice(0, 3);
 }
 export type Quality = "high" | "balanced" | "eco";
-export type Route = {view: "home" | "shelf" | "recent" | "search" | "category"; path?: string; q?: string; camera?: number[]};
+export type Route = {view: "home" | "shelf" | "recent" | "search" | "category" | "contributions"; path?: string; q?: string; camera?: number[]};
 export function routeHash(route: Route) {
   const params = new URLSearchParams();
   if (route.q) params.set("q", route.q);
@@ -89,7 +89,7 @@ export function parseRoute(hash: string): Route {
     const [raw, query] = hash.replace(/^#\/?/, "").split("?");
     const [view, ...parts] = raw.split("/");
     const params = new URLSearchParams(query);
-    const route: Route = {view: ["shelf", "recent", "search", "category"].includes(view) ? view as Route["view"] : "home"};
+    const route: Route = {view: ["shelf", "recent", "search", "category", "contributions"].includes(view) ? view as Route["view"] : "home"};
     if (route.view === "category") route.path = parts.map(decodeURIComponent).join("/");
     if (route.view === "search") route.q = params.get("q") ?? "";
     const camera = params.get("camera")?.split(",").map(Number);

@@ -107,7 +107,7 @@ export const blogTree = [
   {
     "name": "backend",
     "path": "backend",
-    "count": 31,
+    "count": 32,
     "children": [
       {
         "name": "go",
@@ -260,6 +260,21 @@ export const blogTree = [
             "path": "backend/go/资料.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/backend/go/%E8%B5%84%E6%96%99.md",
             "updatedAt": 1783841012000,
+            "change": "modified"
+          }
+        ]
+      },
+      {
+        "name": "mq",
+        "path": "backend/mq",
+        "count": 1,
+        "children": [],
+        "files": [
+          {
+            "title": "消息队列kafka",
+            "path": "backend/mq/消息队列kafka.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/backend/mq/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97kafka.md",
+            "updatedAt": 1789461648000,
             "change": "modified"
           }
         ]
@@ -479,14 +494,21 @@ export const blogTree = [
   {
     "name": "llm",
     "path": "llm",
-    "count": 41,
+    "count": 44,
     "children": [
       {
         "name": "agent",
         "path": "llm/agent",
-        "count": 23,
+        "count": 25,
         "children": [],
         "files": [
+          {
+            "title": "20260912agent思考",
+            "path": "llm/agent/20260912agent思考.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/20260912agent%E6%80%9D%E8%80%83.md",
+            "updatedAt": 1789195341000,
+            "change": "added"
+          },
           {
             "title": "agent从记忆到自我进化",
             "path": "llm/agent/agent从记忆到自我进化.md",
@@ -583,6 +605,13 @@ export const blogTree = [
             "path": "llm/agent/Harness理解.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/Harness%E7%90%86%E8%A7%A3.md",
             "updatedAt": 1784365231000,
+            "change": "modified"
+          },
+          {
+            "title": "Jev",
+            "path": "llm/agent/Jev.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/Jev.md",
+            "updatedAt": 1790420859000,
             "change": "modified"
           },
           {
@@ -711,7 +740,7 @@ export const blogTree = [
       {
         "name": "theory",
         "path": "llm/theory",
-        "count": 12,
+        "count": 13,
         "children": [],
         "files": [
           {
@@ -719,6 +748,13 @@ export const blogTree = [
             "path": "llm/theory/agentic rl.md",
             "url": "https://github.com/golitter/glm-blogs/blob/master/llm/theory/agentic%20rl.md",
             "updatedAt": 1763448040000,
+            "change": "added"
+          },
+          {
+            "title": "AI自进化与RSI：从Coding Agent理解递归自我改进",
+            "path": "llm/theory/AI自进化与RSI：从Coding Agent理解递归自我改进.md",
+            "url": "https://github.com/golitter/glm-blogs/blob/master/llm/theory/AI%E8%87%AA%E8%BF%9B%E5%8C%96%E4%B8%8ERSI%EF%BC%9A%E4%BB%8ECoding%20Agent%E7%90%86%E8%A7%A3%E9%80%92%E5%BD%92%E8%87%AA%E6%88%91%E6%94%B9%E8%BF%9B.md",
+            "updatedAt": 1792164149000,
             "change": "added"
           },
           {
@@ -886,8 +922,8 @@ export const blogTree = [
         "title": "index",
         "path": "skills/index.md",
         "url": "https://github.com/golitter/glm-blogs/blob/master/skills/index.md",
-        "updatedAt": 1783158797000,
-        "change": "added"
+        "updatedAt": 1789127425000,
+        "change": "modified"
       }
     ]
   },
@@ -916,45 +952,45 @@ export const blogTree = [
 ] satisfies BlogTreeNode[];
 export const recentFiles = [
   {
-    "title": "GPT6-Astra分析",
-    "path": "llm/agent/GPT6-Astra分析.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/GPT6-Astra%E5%88%86%E6%9E%90.md",
-    "date": "2026-09-05 19:02",
-    "updatedAt": 1788606121000,
+    "title": "AI自进化与RSI：从Coding Agent理解递归自我改进",
+    "path": "llm/theory/AI自进化与RSI：从Coding Agent理解递归自我改进.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/theory/AI%E8%87%AA%E8%BF%9B%E5%8C%96%E4%B8%8ERSI%EF%BC%9A%E4%BB%8ECoding%20Agent%E7%90%86%E8%A7%A3%E9%80%92%E5%BD%92%E8%87%AA%E6%88%91%E6%94%B9%E8%BF%9B.md",
+    "date": "2026-10-16 23:22",
+    "updatedAt": 1792164149000,
     "change": "added"
   },
   {
-    "title": "资料",
-    "path": "llm/agent/资料.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/%E8%B5%84%E6%96%99.md",
-    "date": "2026-09-04 19:56",
-    "updatedAt": 1788522966000,
+    "title": "Jev",
+    "path": "llm/agent/Jev.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/Jev.md",
+    "date": "2026-09-26 19:07",
+    "updatedAt": 1790420859000,
     "change": "modified"
   },
   {
-    "title": "aicoding agent会话成本管控",
-    "path": "aicode/aicoding agent会话成本管控.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/aicode/aicoding%20agent%E4%BC%9A%E8%AF%9D%E6%88%90%E6%9C%AC%E7%AE%A1%E6%8E%A7.md",
-    "date": "2026-08-17 20:06",
-    "updatedAt": 1786968393000,
+    "title": "消息队列kafka",
+    "path": "backend/mq/消息队列kafka.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/backend/mq/%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97kafka.md",
+    "date": "2026-09-15 16:40",
+    "updatedAt": 1789461648000,
+    "change": "modified"
+  },
+  {
+    "title": "20260912agent思考",
+    "path": "llm/agent/20260912agent思考.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/20260912agent%E6%80%9D%E8%80%83.md",
+    "date": "2026-09-12 14:42",
+    "updatedAt": 1789195341000,
     "change": "added"
   },
   {
-    "title": "J-Space",
-    "path": "llm/theory/J-Space.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/theory/J-Space.md",
-    "date": "2026-08-17 19:35",
-    "updatedAt": 1786966513000,
-    "change": "added"
-  },
-  {
-    "title": "deepseek harness",
-    "path": "llm/agent/deepseek harness.md",
-    "url": "https://github.com/golitter/glm-blogs/blob/master/llm/agent/deepseek%20harness.md",
-    "date": "2026-08-16 19:25",
-    "updatedAt": 1786879511000,
-    "change": "added"
+    "title": "index",
+    "path": "skills/index.md",
+    "url": "https://github.com/golitter/glm-blogs/blob/master/skills/index.md",
+    "date": "2026-09-11 19:50",
+    "updatedAt": 1789127425000,
+    "change": "modified"
   }
 ] satisfies RecentFile[];
-export const markdownCount = 106;
-export const updateTime = "2026-09-09 23:11:57";
+export const markdownCount = 110;
+export const updateTime = "2026-11-04 23:06:47";

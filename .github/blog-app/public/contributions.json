@@ -1,0 +1,106 @@
+{
+  "username": "golitter",
+  "syncedAt": "2026-11-04T12:04:56.974Z",
+  "repositories": [
+    {
+      "fullName": "NanmiCoder/dsh-agent-teams",
+      "name": "dsh-agent-teams",
+      "description": "DeepSeek Harness 的 Agent Teams 多智能体协作插件，支持多个 AI Agent 组成团队，协同完成复杂任务，实现任务分配、并行执行、成员通信与团队协作。 AgentTeams plugin for DeepSeek Harness",
+      "url": "https://github.com/NanmiCoder/dsh-agent-teams",
+      "stars": 2688
+    },
+    {
+      "fullName": "agentscope-ai/ReMe",
+      "name": "ReMe",
+      "description": "ReMe: Memory Management Kit for Agents - Remember Me, Refine Me.",
+      "url": "https://github.com/agentscope-ai/ReMe",
+      "stars": 3750
+    },
+    {
+      "fullName": "agentscope-ai/agentscope",
+      "name": "agentscope",
+      "description": "Build and run agents you can see, understand and trust.",
+      "url": "https://github.com/agentscope-ai/agentscope",
+      "stars": 35366
+    },
+    {
+      "fullName": "awesome-dsh-plugin/awesome-dsh-plugin",
+      "name": "awesome-dsh-plugin",
+      "description": "A curated list of plugins for DeepSeek Harness (dsh) · DeepSeek Harness 插件精选列表",
+      "url": "https://github.com/awesome-dsh-plugin/awesome-dsh-plugin",
+      "stars": 22359
+    },
+    {
+      "fullName": "bytedance/deer-flow",
+      "name": "deer-flow",
+      "description": "An open-source long-horizon SuperAgent harness that researches, codes, and creates. With the help of sandboxes, memories, tools, skill, subagents and message gateway, it handles different levels of tasks that could take minutes to hours.",
+      "url": "https://github.com/bytedance/deer-flow",
+      "stars": 84978
+    }
+  ],
+  "pullRequests": [
+    {
+      "repository": "NanmiCoder/dsh-agent-teams",
+      "number": 225,
+      "title": "fix: 将损坏的 team.json 错误收容在全局宿主边界内",
+      "url": "https://github.com/NanmiCoder/dsh-agent-teams/pull/225",
+      "author": "golitter",
+      "merged": true,
+      "mergedAt": "2026-10-05T04:51:46Z"
+    },
+    {
+      "repository": "awesome-dsh-plugin/awesome-dsh-plugin",
+      "number": 6628,
+      "title": "Add golitter/dsh-deepseek-billing",
+      "url": "https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/6628",
+      "author": "golitter",
+      "merged": true,
+      "mergedAt": "2026-10-16T17:16:22Z"
+    },
+    {
+      "repository": "agentscope-ai/agentscope",
+      "number": 3547,
+      "title": "fix(schedule): respect selected end dates when creating schedules",
+      "url": "https://github.com/agentscope-ai/agentscope/pull/3547",
+      "author": "golitter",
+      "merged": true,
+      "mergedAt": "2026-10-30T02:11:59Z"
+    },
+    {
+      "repository": "agentscope-ai/agentscope",
+      "number": 3610,
+      "title": "fix(schedule): respect selected start times when creating schedules",
+      "url": "https://github.com/agentscope-ai/agentscope/pull/3610",
+      "author": "golitter",
+      "merged": true,
+      "mergedAt": "2026-11-02T04:02:25Z"
+    },
+    {
+      "repository": "bytedance/deer-flow",
+      "number": 7746,
+      "title": "fix(gateway): continue dispatching queued inputs after cancellation",
+      "url": "https://github.com/bytedance/deer-flow/pull/7746",
+      "author": "golitter",
+      "merged": true,
+      "mergedAt": "2026-11-04T02:39:21Z"
+    },
+    {
+      "repository": "agentscope-ai/ReMe",
+      "number": 701,
+      "title": "fix(client): preserve explicitly supplied host or port during address resolution",
+      "url": "https://github.com/agentscope-ai/ReMe/pull/701",
+      "author": "golitter",
+      "merged": true,
+      "mergedAt": "2026-11-02T03:50:08Z"
+    },
+    {
+      "repository": "agentscope-ai/agentscope",
+      "number": 3645,
+      "title": "fix(agent): count rounds completed during HITL resumption toward max_iters",
+      "url": "https://github.com/agentscope-ai/agentscope/pull/3645",
+      "author": "golitter",
+      "merged": true,
+      "mergedAt": "2026-11-02T12:21:04Z"
+    }
+  ]
+}
