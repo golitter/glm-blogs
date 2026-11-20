@@ -25,7 +25,7 @@ export function searchFiles(query: string) {
   if (!terms.length) return files;
   if (!index) {
     if (pinyinFn) buildIndex();
-    else { warmSearch(); return files.filter(file => terms.every(q => normalize(`${file.title} ${file.path}`).includes(q))); }
+    else { void warmSearch().catch(() => {}); return files.filter(file => terms.every(q => normalize(`${file.title} ${file.path}`).includes(q))); }
   }
   return index!.filter(item => terms.every(q => item.text.includes(q) || item.phonetic.includes(q) || item.initials.includes(q))).map(item => item.file);
 }
@@ -44,7 +44,7 @@ export function highlightedParts(text: string, query: string) {
   const chars = Array.from(text), hits = new Set<number>();
   const terms = query.trim().split(/\s+/).map(normalize).filter(Boolean);
   if (!terms.length) return [{text, hit: false}];
-  if (!pinyinFn) { warmSearch(); return [{text, hit: false}]; }
+  if (!pinyinFn) return [{text, hit: false}];
   for (const term of terms) {
     for (const mode of ["text", "pinyin", "initials"] as const) {
       const positions: number[] = []; let joined = "";
@@ -77,26 +77,6 @@ export function suggestions(query: string) {
   return [...nodes].sort((a,b) => score(b) - score(a) || b.count - a.count).slice(0, 3);
 }
 export type Quality = "high" | "balanced" | "eco";
-export type Route = {view: "home" | "shelf" | "recent" | "search" | "category" | "contributions"; path?: string; q?: string; camera?: number[]};
-export function routeHash(route: Route) {
-  const params = new URLSearchParams();
-  if (route.q) params.set("q", route.q);
-  if (route.camera) params.set("camera", route.camera.map(n => n.toFixed(2)).join(","));
-  return `#/${route.view === "home" ? "" : route.view}${route.view === "category" ? "/" + (route.path ?? "").split("/").map(encodeURIComponent).join("/") : ""}${params.size ? "?" + params : ""}`;
-}
-export function parseRoute(hash: string): Route {
-  try {
-    const [raw, query] = hash.replace(/^#\/?/, "").split("?");
-    const [view, ...parts] = raw.split("/");
-    const params = new URLSearchParams(query);
-    const route: Route = {view: ["shelf", "recent", "search", "category", "contributions"].includes(view) ? view as Route["view"] : "home"};
-    if (route.view === "category") route.path = parts.map(decodeURIComponent).join("/");
-    if (route.view === "search") route.q = params.get("q") ?? "";
-    const camera = params.get("camera")?.split(",").map(Number);
-    if (camera?.length === 6 && camera.every(n => Number.isFinite(n) && Math.abs(n) < 10000)) route.camera = camera;
-    return route;
-  } catch { return {view: "home"}; }
-}
 export function readLocal<T>(key: string, fallback: T): T { try { return JSON.parse(localStorage.getItem(key) ?? "null") ?? fallback; } catch { return fallback; } }
 export function writeLocal(key: string, value: unknown) { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* Private storage is optional. */ } }
 export function updateInfo(file: BlogFile, now = Date.now()) {

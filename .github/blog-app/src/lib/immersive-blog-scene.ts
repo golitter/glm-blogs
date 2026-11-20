@@ -10,7 +10,8 @@ import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.j
 import { blogTree, markdownCount, recentFiles, type BlogFile, type BlogTreeNode } from "@/generated/blog-data";
 import { PROFILE_URL, CSDN_URL, REPO_URL } from "@/lib/constants";
 import { shelfLayout } from "@/lib/shelf-layout";
-import { searchFiles, nodes, updateInfo, type Route, type Quality } from "@/lib/blog-experience";
+import { searchFiles, nodes, updateInfo, type Quality } from "@/lib/blog-experience";
+import type { Route } from "@/lib/blog-route";
 
 type Interactive = {
   root: THREE.Object3D;
@@ -67,7 +68,6 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const renderer = new THREE.WebGLRenderer({ antialias: !low, powerPreference: low ? "low-power" : "high-performance" });
   renderer.setPixelRatio(pixelRatio);
-  renderer.setSize(host.clientWidth, host.clientHeight);
   renderer.shadowMap.enabled = quality === "high";
   // Only the bird's sub-texel bob animates continuously, so the shadow map is rendered once and
   // refreshed on demand (hover pulls, panel show/hide) instead of every frame.
@@ -161,7 +161,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     return geometry;
   }
   function rounded(parent: THREE.Object3D, size: [number, number, number], position: [number, number, number], color: number, radius = 0.12) {
-    const segments = low ? 1 : 4;
+    const segments = low ? 1 : quality === "balanced" || radius <= .16 ? 2 : 4;
     const geometry = cached(`r:${size.join(",")};${segments};${radius}`, () => new RoundedBoxGeometry(...size, segments, radius));
     return mesh(geometry, toon(color), parent, position);
   }
@@ -412,6 +412,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     movingCamera = true;
     controls.enabled = false;
     controls.autoRotate = false;
+    requestRender();
   }
   function fitView(target: THREE.Vector3, width: number, height: number, tilt = 0) {
     const distance = Math.max(height, width / camera.aspect) / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * 1.18;
@@ -549,7 +550,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   sphere(bow, [0, 0, .05], [.1, .1, .08], PALETTE.gold);
   let birdJumpAt = -Infinity;
   bird.userData.name = "小鸟 · 点击跳一跳";
-  interactive(bird, () => { birdJumpAt = performance.now(); lastActivity = birdJumpAt; });
+  interactive(bird, () => { birdJumpAt = performance.now(); lastActivity = birdJumpAt; requestRender(); });
 
   const searchConsole = new THREE.Group();
   searchConsole.position.set(0, 1.95, 1.95);
@@ -604,6 +605,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   let scrollThumb: THREE.Mesh | null = null;
   function scrollPanel(value: number) {
     lastActivity = performance.now();
+    requestRender();
     panelScroll = Math.max(0, Math.min(value, scrollLimit));
     resetHover();
     selectOutline([]);
@@ -767,9 +769,10 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
 
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
+  const intersections: THREE.Intersection[] = [];
   let hovered: Interactive | null = null;
   function resetHover() {
-    if (hovered) { hovered.root.scale.copy(hovered.baseScale); hovered.root.position.copy(hovered.basePosition); renderer.shadowMap.needsUpdate = true; }
+    if (hovered) { hovered.root.scale.copy(hovered.baseScale); hovered.root.position.copy(hovered.basePosition); renderer.shadowMap.needsUpdate = true; requestRender(); }
     hovered = null; selectOutline([]); options.onHover("");
   }
   function highlight(record: Interactive | null) {
@@ -780,7 +783,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     // Pull books out of the cabinet; lift other labels without changing hit areas.
     record.root.position.z = record.basePosition.z + (record.root.userData.book ? .25 : .055);
     renderer.shadowMap.needsUpdate = true;
-    selectOutline([record.root]); options.onHover(record.name);
+    selectOutline([record.root]); options.onHover(record.name); requestRender();
   }
   // Plain numbers instead of a Vector2: pointermove fires faster than the display and must stay allocation-free.
   let downX = 0, downY = 0;
@@ -792,8 +795,11 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     const rect = renderer.domElement.getBoundingClientRect();
     pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
     raycaster.setFromCamera(pointer, camera);
-    const hits = raycaster.intersectObjects(panel.visible ? [panel] : [world], true);
-    for (const hit of hits) {
+    intersections.length = 0;
+    // Previously visited list rows keep their meshes, but only visible rows can be clicked.
+    if (panel.visible) raycaster.intersectObjects(panel.children.filter(child => child.visible), true, intersections);
+    else raycaster.intersectObject(world, true, intersections);
+    for (const hit of intersections) {
       let object: THREE.Object3D | null = hit.object;
       let visible = true;
       while (object) { if (!object.visible) visible = false; object = object.parent; }
@@ -849,8 +855,8 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     if (panel.visible) renderer.domElement.setPointerCapture(event.pointerId);
   }
   function onPointerUp(event: PointerEvent) {
-    const hit = hitTest(event);
-    if (!dragged && hit && hit === pressed) { options.onInteraction(); options.onHover(hit.name); hit.action(); }
+    const hit = dragged ? null : hitTest(event);
+    if (hit && hit === pressed) { options.onInteraction(); options.onHover(hit.name); hit.action(); }
     if (dragged) options.onInteraction();
     pressed = null;
     activePointer = null;
@@ -886,6 +892,7 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   window.addEventListener("keydown", onKeyDown);
   let historyTimer: ReturnType<typeof setTimeout>;
   controls.addEventListener("start", () => { controls.autoRotate = false; lastActivity = performance.now(); });
+  controls.addEventListener("change", () => { if (!updatingControls) requestRender(); });
   controls.addEventListener("end", () => {
     clearTimeout(historyTimer);
     historyTimer = setTimeout(() => {
@@ -894,17 +901,46 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   });
 
   let disposed = false;
+  let searchOpen = false;
+  let updatingControls = false;
+  let ready = false;
   let frame = 0;
-  let renderTimeout: ReturnType<typeof setTimeout>;
+  let renderTimeout: ReturnType<typeof setTimeout> | undefined;
+  let previousFrame: number | undefined;
+  let nextFrameTime = 0;
+  let birdWasJumping = false;
   const timer = new THREE.Timer();
   timer.connect(document);
-  function animate(timestamp?: number) {
-    if (disposed || document.hidden) return;
+  function canRender() { return !disposed && !document.hidden && (!searchOpen || !ready); }
+  function stopRendering() {
+    clearTimeout(renderTimeout);
+    cancelAnimationFrame(frame);
+    frame = 0;
+    previousFrame = undefined;
+    nextFrameTime = 0;
+  }
+  function requestRender() {
+    if (!canRender() || frame) return;
+    clearTimeout(renderTimeout);
+    frame = requestAnimationFrame(animate);
+  }
+  function animate(timestamp: number) {
+    frame = 0;
+    if (!canRender()) return;
+    // Use display timestamps for the active frame budget, including on high-refresh displays.
+    if (timestamp < nextFrameTime - 1) {
+      frame = requestAnimationFrame(animate);
+      return;
+    }
+    const interval = 1000 / (quality === "high" ? 60 : 30);
+    nextFrameTime = Math.max(timestamp - interval, nextFrameTime) + interval;
+    const elapsed = previousFrame === undefined ? interval : Math.min(50, timestamp - previousFrame);
+    previousFrame = timestamp;
     timer.update(timestamp);
     const t = timer.getElapsed();
-    const idleFor = performance.now() - lastActivity;
-    const active = movingCamera || idleFor < 1800;
-    if (!reduced.matches && !low) {
+    const idleFor = timestamp - lastActivity;
+    const ambientMotion = !reduced.matches && !low;
+    if (ambientMotion) {
       board.rotation.z = Math.sin(t * .35) * .006;
       titleBoard.rotation.z = Math.sin(t * .28) * .006;
       const pulse = .48 + Math.sin(t * 1.7) * .2;
@@ -912,36 +948,49 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
       const glowPulse = .035 + Math.sin(t * 1.7) * .02;
       for (const glow of glowCache.values()) glow.emissiveIntensity = glowPulse;
     }
-    const jumpProgress = (performance.now() - birdJumpAt) / 850;
-    const jumpHeight = jumpProgress < 1 ? Math.sin(Math.PI * Math.max(0, jumpProgress)) * (reduced.matches ? .25 : 1.65) : 0;
-    bird.position.y = 2.55 + jumpHeight + (!reduced.matches && !low && jumpProgress >= 1 ? Math.sin(t * 1.2) * .08 : 0);
-    if (jumpProgress < 1 || jumpProgress < 1.1) renderer.shadowMap.needsUpdate = true;
+    const jumpProgress = (timestamp - birdJumpAt) / 850;
+    const birdJumping = jumpProgress < 1;
+    const jumpHeight = birdJumping ? Math.sin(Math.PI * Math.max(0, jumpProgress)) * (reduced.matches ? .25 : 1.65) : 0;
+    bird.position.y = 2.55 + jumpHeight + (ambientMotion && !birdJumping ? Math.sin(t * 1.2) * .08 : 0);
+    if (birdJumping || birdWasJumping) renderer.shadowMap.needsUpdate = true;
+    birdWasJumping = birdJumping;
     if (movingCamera) {
-      camera.position.lerp(desiredPosition, .075);
-      controls.target.lerp(desiredTarget, .075);
+      const step = 1 - Math.pow(1 - .075, elapsed / (1000 / 60));
+      camera.position.lerp(desiredPosition, step);
+      controls.target.lerp(desiredTarget, step);
       camera.lookAt(controls.target);
       if (camera.position.distanceTo(desiredPosition) < .04 && controls.target.distanceTo(desiredTarget) < .04) {
         movingCamera = false;
         controls.enabled = true;
       }
     }
-    if (!movingCamera) controls.update();
+    updatingControls = true;
+    const controlsMoved = !movingCamera && controls.update();
+    updatingControls = false;
     if (composer) composer.render(); else renderer.render(scene, camera);
-    // No animation work while hidden; idle scenes redraw at 6–12 fps, dropping to 3 fps once deeply idle.
-    const fps = active ? (quality === "high" ? 60 : 30) : idleFor > 30000 ? 3 : low ? 6 : 12;
-    renderTimeout = setTimeout(() => { frame = requestAnimationFrame(animate); }, Math.max(0, 1000 / fps - 16));
+    if (!ready) { ready = true; options.onReady(); }
+    if (!canRender()) return;
+    if (movingCamera || controlsMoved || birdJumping || (ambientMotion && idleFor < 1800)) requestRender();
+    else if (ambientMotion) renderTimeout = setTimeout(requestRender, 1000 / (idleFor > 30000 ? 3 : 12));
   }
-  function visibilityChanged() { clearTimeout(renderTimeout); cancelAnimationFrame(frame); if (!document.hidden) { lastActivity = performance.now(); frame = requestAnimationFrame(animate); } }
+  function visibilityChanged() {
+    stopRendering();
+    if (!document.hidden) { lastActivity = performance.now(); requestRender(); }
+  }
+  reduced.addEventListener("change", requestRender);
   function contextLost(event: Event) { event.preventDefault(); options.onError(); }
   document.addEventListener("visibilitychange", visibilityChanged);
   renderer.domElement.addEventListener("webglcontextlost", contextLost);
+  let viewportWidth = 0, viewportHeight = 0;
   function resize() {
     const width = host.clientWidth;
     const height = host.clientHeight;
+    if (!width || !height || (width === viewportWidth && height === viewportHeight)) return;
+    viewportWidth = width;
+    viewportHeight = height;
     camera.aspect = width / height;
     camera.fov = 38;
     camera.updateProjectionMatrix();
-    renderer.setPixelRatio(pixelRatio);
     renderer.setSize(width, height);
     composer?.setSize(width, height);
     outline?.resolution.set(width, height);
@@ -960,10 +1009,16 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
   const resizer = new ResizeObserver(resize);
   resizer.observe(host);
   resize();
-  animate();
-  const readyFrame = requestAnimationFrame(() => { if (!disposed) options.onReady(); });
+  requestRender();
 
   return {
+    setSearchOpen(open: boolean) {
+      if (searchOpen === open) return;
+      searchOpen = open;
+      if (open && ready) stopRendering();
+      else if (open) requestRender();
+      else { lastActivity = performance.now(); requestRender(); }
+    },
     previewArticle(file: BlogFile) {
       resetHover();
       if (panel.visible) { panel.visible = false; clearPanel(); }
@@ -1009,9 +1064,9 @@ export function createImmersiveBlog(host: HTMLElement, options: SceneOptions) {
     setQuery(value: string) { showSearch(value); },
     dispose() {
       disposed = true;
-      clearTimeout(renderTimeout); clearTimeout(historyTimer);
-      cancelAnimationFrame(frame);
-      cancelAnimationFrame(readyFrame);
+      stopRendering();
+      clearTimeout(historyTimer);
+      reduced.removeEventListener("change", requestRender);
       cancelAnimationFrame(hoverFrame);
       resizer.disconnect();
       renderer.domElement.removeEventListener("pointermove", onPointerMove);

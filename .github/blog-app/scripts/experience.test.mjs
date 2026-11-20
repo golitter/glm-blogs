@@ -7,12 +7,13 @@ const compiled = ts.transpileModule(source, {compilerOptions:{module:ts.ModuleKi
   .replace('"pinyin-pro"', JSON.stringify(import.meta.resolve('pinyin-pro')))
   .replace('"../generated/blog-data"', JSON.stringify(new URL('../src/generated/blog-data.ts', import.meta.url).href));
 const lib = await import('data:text/javascript;base64,' + Buffer.from(compiled).toString('base64'));
+const routes = await import('../src/lib/blog-route.ts');
 test('routes round trip Chinese, nested paths, reserved query characters and camera', () => {
   for (const route of [{view:'category',path:'llm/agent'}, {view:'category',path:'学习/含 空格'}, {view:'search',q:'codex & C++/#'}, {view:'recent'}, {view:'contributions'}, {view:'home',camera:[1,2,3,4,5,6]}]) {
-    assert.deepEqual(lib.parseRoute(lib.routeHash(route)), route);
+    assert.deepEqual(routes.parseRoute(routes.routeHash(route)), route);
   }
-  assert.deepEqual(lib.parseRoute('#/category/%broken'), {view:'home'});
-  assert.equal(lib.parseRoute('#/recent?camera=NaN,2,3,4,5,6').camera, undefined);
+  assert.deepEqual(routes.parseRoute('#/category/%broken'), {view:'home'});
+  assert.equal(routes.parseRoute('#/recent?camera=NaN,2,3,4,5,6').camera, undefined);
 });
 test('search supports case folding, pinyin, initials, multiple terms and empty query', async () => {
   await lib.warmSearch();
